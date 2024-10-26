@@ -7,6 +7,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 
 import mongoose from 'mongoose';
+import {JWT_SECRET_KEY} from "../config/config.js";
 
 
 
@@ -167,13 +168,12 @@ export const individualRegisterService = async (req, res) => {
 
     await session.commitTransaction();
 
-    // Set the token in the headers
-    res.setHeader('Authorization', `Bearer ${token}`);
 
     return {
       statusCode: 201,
       status: 'Success',
       message: 'Registration successful. Please verify your OTP.',
+      data: { token: token },
     };
 
   } catch (error) {
@@ -287,13 +287,12 @@ export const businessRegisterService = async (req, res) => {
 
     await session.commitTransaction();
 
-    // Set the token in the headers
-    res.setHeader('Authorization', `Bearer ${token}`);
 
     return {
       statusCode: 201,
       status: 'Success',
       message: 'Registration successful. Please verify your OTP.',
+        data: { token: token },
     };
 
   } catch (error) {
@@ -312,36 +311,28 @@ export const businessRegisterService = async (req, res) => {
 
 
 export const verifyOtpService = async (req, res) => {
-  const session = await mongoose.startSession(); // Start a session
+  const session = await mongoose.startSession();
   session.startTransaction();
   try {
     const { otp } = req.body;
-    // Extract the token from the Authorization header
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return {
-        statusCode: 401,
-        status: 'Failed',
-        message: 'Authorization token missing or invalid.',
-      };
-    }
-
-    const token = authHeader.split(' ')[1]; // Get the token from 'Bearer <token>'
-
-    // Verify the token and extract the payload (email in this case)
-    const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
-    const email = decoded.email; // Get the email from the token
-
-    if (!email) {
+    const token = req.headers.token;
+    if (!token) {
       return {
         statusCode: 400,
         status: 'Failed',
-        message: 'Invalid token: Email not found.',
+        message: 'Invalid token: Token not found.',
       };
     }
+    const decodedToken = jwt.verify(token, JWT_SECRET_KEY);
+    const email = decodedToken.email;
 
-
-
+      if (!email) {
+        return {
+          statusCode: 400,
+          status: 'Failed',
+          message: 'Invalid token: Email not found.',
+        };
+      }
     // Find the user by email
     const user = await UsersModel.findOne({ email }).session(session);
     if (!user) {
