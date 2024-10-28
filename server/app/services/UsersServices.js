@@ -79,6 +79,14 @@ export const individualRegisterService = async (req, res) => {
   try {
     const { email, phone, password, confirmPassword, role, name } = req.body;
 
+    if(role !== 'individual'){
+      return {
+        statusCode: 400,
+        status: 'Failed',
+        message: 'Invalid role.',
+      };
+    };
+
     // Basic validation
     if (password !== confirmPassword) {
       return {
@@ -195,6 +203,14 @@ export const businessRegisterService = async (req, res) => {
   session.startTransaction();
   try {
     const { businessName, email, phone, password, confirmPassword, role, tradeLicenseNumber, location } = req.body;
+
+    if (role !== 'business') {
+      return {
+        statusCode: 400,
+        status: 'Failed',
+        message: 'Invalid role.',
+      };
+    };
 
     // Basic validation
     if (password !== confirmPassword) {
