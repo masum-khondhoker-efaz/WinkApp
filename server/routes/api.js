@@ -3,6 +3,8 @@ import AuthenticationMiddleware from '../app/middlewares/AuthenticationMiddlewar
 import * as UsersControllers from '../app/controllers/UsersControllers.js';
 import * as ProfileControllers from '../app/controllers/ProfileControllers.js';
 import * as FileController from '../app/controllers/FileController.js';
+import * as ProductController from '../app/controllers/ProductController.js';
+import * as CategoryController from '../app/controllers/CategoryController.js';
 
 const router = express.Router();
 
@@ -28,6 +30,16 @@ router.delete('/delete-multiple-file', FileController.deleteMultipleFile);
 
 
 
+//Business Profile Routes
+router.post('/add-products', AuthenticationMiddleware, ProductController.addProduct);
+router.put('/update-product/:id', AuthenticationMiddleware, ProductController.updateProduct);
+router.get('/product-details/:id', AuthenticationMiddleware, ProductController.productDetails);
+router.get('/products-by-category/:category', AuthenticationMiddleware, ProductController.getProductByCategory);
+router.get('/product/:id', AuthenticationMiddleware, ProductController.getProductByID);
+router.get('/products', AuthenticationMiddleware, ProductController.getProducts);
+router.delete('/delete-product/:id', AuthenticationMiddleware, ProductController.deleteProductByID);
+router.delete('/delete-products', AuthenticationMiddleware, ProductController.deleteProducts);
+router.get('/category-list', AuthenticationMiddleware, CategoryController.categoryList);
 
 
 export default router;

@@ -12,7 +12,6 @@ import {JWT_SECRET_KEY} from "../config/config.js";
 
 
 const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.(com|org|net|edu|gov|mil|int|info|bd|co|io|ai)$/;
-let otpStore = {}; // Temporary in-memory store for OTPs, should use Redis or similar in production
 
 
 
@@ -45,22 +44,6 @@ export const loginService = async (req,res) => {
     }
     let token = TokenEncode(data[0]['email'], data[0]['role'], data[0]['_id']);
 
-    if(rememberMe){
-      let options = {
-        maxAge: 30 * 24 * 60 * 60 * 1000,
-        httpOnly: true,
-        sameSite: 'none',
-        secure: true,
-      };
-      res.cookie('Token', token, options);
-    }else{
-      let options = {
-        httpOnly: true, 
-        sameSite: 'none', 
-        secure: true,
-      };
-      res.cookie('Token', token, options); 
-    }
 
     return {
       statusCode: 200,
@@ -72,6 +55,7 @@ export const loginService = async (req,res) => {
     return { statusCode: 500, status: 'Failed', message: error.toString() };
   }
 };
+
 
 
 export const individualRegisterService = async (req, res) => {
@@ -194,7 +178,6 @@ export const individualRegisterService = async (req, res) => {
     session.endSession(); // End session
   }
 };
-
 
 
 

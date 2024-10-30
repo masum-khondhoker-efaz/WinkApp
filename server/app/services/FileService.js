@@ -17,11 +17,11 @@ export const profileImageUploadService = async (req) => {
     const uploadedFile = req.files.file; // 'file' is the name attribute in the form
 
     // Set upload path
-    const uploadDir = path.join(__dirname, '..', '..', 'public', 'uploads');
+    const userUploadDir = path.join(__dirname, '..', '..', 'public', 'uploads', userId);
 
-    // Check if the uploads directory exists, if not create it
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true }); // Create directory if it doesn't exist
+    // Check if the user's upload directory exists, if not create it
+    if (!fs.existsSync(userUploadDir)) {
+      fs.mkdirSync(userUploadDir, { recursive: true }); // Create directory if it doesn't exist
     }
 
     // Fetch the current user and their existing image
@@ -33,8 +33,7 @@ export const profileImageUploadService = async (req) => {
     // Delete the existing profile image if it exists
     if (user.image) {
       const existingImagePath = path.join(
-        uploadDir,
-        user.image.split('/').pop()
+        __dirname, '..', '..', 'public', user.image
       );
       if (fs.existsSync(existingImagePath)) {
         fs.unlinkSync(existingImagePath); // Delete the old image file
@@ -47,8 +46,8 @@ export const profileImageUploadService = async (req) => {
       '_'
     ); // Sanitize the original filename
     const timestampedFileName = `${Date.now()}-${sanitizedFileName}`;
-    const originalUrl = `/uploads/${timestampedFileName}`;
-    const uploadPath = path.join(uploadDir, timestampedFileName); // Prepend timestamp
+    const originalUrl = `/uploads/${userId}/${timestampedFileName}`;
+    const uploadPath = path.join(userUploadDir, timestampedFileName); // Prepend timestamp
 
     // Use the mv() method to place the file on the server
     await new Promise((resolve, reject) => {
@@ -66,6 +65,7 @@ export const profileImageUploadService = async (req) => {
     await user.save(); // Save the updated user record
 
     return {
+      statusCode: 201,
       status: true,
       data: 'File uploaded successfully!',
       fileName: timestampedFileName,

@@ -8,8 +8,10 @@ import {
 
 export const profileImageUpload = async (req, res) => {
   let result = await profileImageUploadService(req);
-  return res.status(200).json(result);
+  return res.status(result.statusCode).json(result);
 };
+
+
 
 export const uploadMultipleFile = async (req, res) => {
     let result = await uploadMultipleFileService(req);

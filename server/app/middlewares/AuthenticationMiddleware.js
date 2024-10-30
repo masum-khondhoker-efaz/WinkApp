@@ -2,7 +2,8 @@ import { TokenDecode } from '../utilities/TokenUtility.js';
 
 export default (req, res, next) => {
   try {
-    let token = req.cookies['Token'];
+    let token = req.headers['token'];
+
     
     if (!token) {
       return res
@@ -13,19 +14,12 @@ export default (req, res, next) => {
     let decoded = TokenDecode(token);
 
     if (!decoded) {
-      res.clearCookie('Token');
-      return res
-        .status(401)
-        .json({ status: 'Failed', message: 'Unauthorized, invalid token' });
+      return {
+        statusCode: 401,
+        status: 'Failed',
+        message: 'Unauthorized token',
+      };
     }
-
-    let options = {
-      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-      httpOnly: true,
-      sameSite: 'none',
-      secure: true,
-    };
-    res.cookie('Token', token, options);
 
     let { user_id, email, role } = decoded;
 
