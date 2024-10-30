@@ -3,7 +3,7 @@ import path from 'path';
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
 import ProductModel from '../models/ProductModel.js';
-
+import mongoose from 'mongoose';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -302,20 +302,89 @@ export const getProductByIDService = async (req, res) => {
 
 export const getProductsService = async (req, res) => {
   try {
-    // Logic to get all products
+    const userID = req.headers.user_id;
+    if (req.headers.role !== 'business') {
+      return {
+        statusCode: 400,
+        status: 'Failed',
+        message: 'Unauthorized Access',
+      };
+    }
+
+    // Logic to get all products for the specific user_id
+    const products = await ProductModel.find({ userID }).lean();
+    if (!products || products.length === 0) {
+      return {
+        statusCode: 404,
+        status: 'Failed',
+        message: 'No products found for this user',
+      };
+    }
+
     return {
       statusCode: 200,
       status: 'Success',
       message: 'Products Retrieved Successfully',
+      data: products,
     };
   } catch (error) {
     return { statusCode: 500, status: 'Failed', message: error.toString() };
   }
 };
 
-export const deleteProductByIDService = async (req, res) => {
+export const deleteProductByIDService = async (req) => {
   try {
-    // Logic to delete product by ID
+    const userID = req.headers.user_id;
+    const userRole = req.headers.role;
+    const productID = req.params.id; // Extract productID from params
+
+    if (userRole !== 'business') {
+      return {
+        statusCode: 401,
+        status: 'Failed',
+        message: 'Unauthorized Access',
+      };
+    }
+
+    // Retrieve the current product from the database using productID
+    const existingProduct = await ProductModel.findById(productID);
+    if (!existingProduct) {
+      return {
+        statusCode: 404,
+        status: 'Failed',
+        message: 'Product not found',
+      };
+    }
+    
+    
+    // Check if the product belongs to the user
+    if (existingProduct.userID.toString() !== userID) {
+      return {
+        statusCode: 403,
+        status: 'Failed',
+        message: 'Forbidden: You do not have permission to delete this product',
+      };
+    }
+
+    // Delete the product from the database
+    await ProductModel.findByIdAndDelete(productID);
+
+    // Delete associated images from the file system
+    const oldImageNames = typeof existingProduct.image === 'string' ? existingProduct.image.split(',') : [];
+    for (const imgName of oldImageNames) {
+      const fullPath = path.join(__dirname, '..', '..', 'public', 'products', userID, imgName);
+      if (fs.existsSync(fullPath)) {
+        try {
+          fs.unlinkSync(fullPath); // Delete the old image
+          console.log(`Deleted image: ${fullPath}`);
+        } catch (err) {
+          console.error(`Error deleting image: ${fullPath}`, err);
+        }
+      } else {
+        console.log(`Image not found for deletion: ${fullPath}`);
+      }
+    }
+
     return {
       statusCode: 200,
       status: 'Success',
