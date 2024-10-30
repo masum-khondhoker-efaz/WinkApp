@@ -281,7 +281,7 @@ export const getProductByIDService = async (req, res) => {
     // Logic to get product by ID
     const product = await ProductModel.findById(productID); // Use lean() to return a plain JavaScript object
 
-    if (!products || products.length === 0) {
+    if (!product || product.length === 0) {
       return {
         statusCode: 404,
         status: 'Failed',
