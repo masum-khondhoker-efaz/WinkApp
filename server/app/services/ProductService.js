@@ -269,11 +269,31 @@ export const getProductByCategoryService = async (req, res) => {
 
 export const getProductByIDService = async (req, res) => {
   try {
+    if (req.headers.role !== 'business') {
+      return {
+        statusCode: 400,
+        status: 'Failed',
+        message: 'Unauthorized Access',
+      };
+    }
+    const productID = req.params.id; // Get product ID from request parameters
+
     // Logic to get product by ID
+    const product = await ProductModel.findById(productID); // Use lean() to return a plain JavaScript object
+
+    if (!products || products.length === 0) {
+      return {
+        statusCode: 404,
+        status: 'Failed',
+        message: 'Product not found',
+      };
+    }
+
     return {
       statusCode: 200,
       status: 'Success',
       message: 'Product Retrieved Successfully by ID',
+      data: product,
     };
   } catch (error) {
     return { statusCode: 500, status: 'Failed', message: error.toString() };
