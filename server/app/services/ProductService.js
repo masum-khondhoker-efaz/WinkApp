@@ -3,11 +3,10 @@ import path from 'path';
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
 import ProductModel from '../models/ProductModel.js';
-import mongoose from 'mongoose';
+import { cloudinaryUploadImage } from '../middlewares/multerMiddleware.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-
 
 export const addProductService = async (req, res) => {
   try {
@@ -21,32 +20,45 @@ export const addProductService = async (req, res) => {
       };
     }
 
-    const { files } = req.files; 
-    const { data } = req.body; 
-    const imagePaths = [];
+    const { files } = req.files;
+    const { data } = req.body;
 
-    const userDir = path.join(__dirname, '..', '..', 'public', 'products', userID);
+    const userDir = path.join(
+      __dirname,
+      '..',
+      '..',
+      'public',
+      'products',
+      userID
+    );
     if (!fs.existsSync(userDir)) {
       fs.mkdirSync(userDir, { recursive: true });
     }
-
+    let imagePath;
+    const imageData = [];
     if (Array.isArray(files)) {
       // Multiple images
       for (const file of files) {
-        const imagePath = path.join(userDir, Date.now() + "-" + file.name);
+        imagePath = path.join(userDir, Date.now() + '-' + file?.name);
         fs.writeFileSync(imagePath, file.data);
-        imagePaths.push(`/products/${userID}/${Date.now()}-${file.name}`);
+        const imageData1 = await cloudinaryUploadImage(imagePath);
+        imageData.push(imageData1.url);
+        fs.unlinkSync(imagePath); // Remove the image after uploading
       }
     } else {
       // Single image
-      const imagePath = path.join(userDir, Date.now() + "-" + files.name);
+      imagePath = path.join(userDir, Date.now() + '-' + files.name);
       fs.writeFileSync(imagePath, files.data);
-      imagePaths.push(`/products/${userID}/${Date.now()}-${files.name}`);
+      const imageData1 = await cloudinaryUploadImage(imagePath);
+      imageData.push(imageData1.url);
+      fs.unlinkSync(imagePath); // Remove the image after uploading
     }
 
+    console.log(imageData);
+
     const productData = JSON.parse(data);
-    productData.image = imagePaths.join(','); // Convert array to comma-separated string
-    if(productData.discountPrice){
+    productData.images = imageData; // Store images as an array
+    if (productData.discountPrice) {
       productData.discount = true;
     }
     if (parseInt(productData.quantity) > 0) {
@@ -61,7 +73,7 @@ export const addProductService = async (req, res) => {
       statusCode: 201,
       status: 'Success',
       message: 'Product added Successfully',
-      data: { imagePaths, productData }, 
+      data: { imageData, productData },
     };
   } catch (error) {
     return { statusCode: 500, status: 'Failed', message: error.toString() };
@@ -70,26 +82,25 @@ export const addProductService = async (req, res) => {
 
 
 
-
 export const updateProductService = async (req, res) => {
   try {
     const userID = req.headers.user_id;
     const userRole = req.headers.role;
-    const productID = req.params.id; // Extract productID from params
+    const productID = req.params.id;
 
     if (userRole !== 'business') {
       return {
+        statusCode: 401,
         status: 'Failed',
         message: 'Unauthorized Access',
       };
     }
 
-    const { files } = req.files; // Assuming images are sent as files
-    const formData = req.body; // Extract other fields from the form-data
-    const imagePaths = [];
+    const { files } = req.files;
+    const { data } = req.body;
 
-    // Retrieve the current product from the database using productID
-    const existingProduct = await ProductModel.findById(productID).lean();
+    // Retrieve the current product from the database
+    const existingProduct = await ProductModel.findById(productID);
     if (!existingProduct) {
       return {
         statusCode: 404,
@@ -98,7 +109,6 @@ export const updateProductService = async (req, res) => {
       };
     }
 
-    // Prepare the directory to store images
     const userDir = path.join(
       __dirname,
       '..',
@@ -111,90 +121,74 @@ export const updateProductService = async (req, res) => {
       fs.mkdirSync(userDir, { recursive: true });
     }
 
-    // Handle file uploads and old image deletion
-    if (files) {
-      // Retrieve image names from the database, ensuring it's a string
-      const oldImageNames =
-        typeof existingProduct.image === 'string'
-          ? existingProduct.image.split(',')
-          : [];
+    let newImageData = [];
+    const existingImages = existingProduct.images || [];
 
-      // Delete old images from the file system
-      for (const imgName of oldImageNames) {
-        const fullPath = path.join(
-          __dirname,
-          '..',
-          '..',
-          'public',
-          'products',
-          userID,
-          imgName
-        );
-        if (fs.existsSync(fullPath)) {
-          try {
-            fs.unlinkSync(fullPath); // Delete the old image
-            console.log(`Deleted old image: ${fullPath}`);
-          } catch (err) {
-            console.error(`Error deleting old image: ${fullPath}`, err);
+    // Process new images
+    if (Array.isArray(files)) {
+      for (const file of files) {
+        const imagePath = path.join(userDir, Date.now() + '-' + file.name);
+        fs.writeFileSync(imagePath, file.data);
+
+        const imageData = await cloudinaryUploadImage(imagePath);
+        newImageData.push(imageData.url);
+        fs.unlinkSync(imagePath); // Remove the image after uploading
+      }
+    } else if (files) {
+      const imagePath = path.join(userDir, Date.now() + '-' + files.name);
+      fs.writeFileSync(imagePath, files.data);
+
+      const imageData = await cloudinaryUploadImage(imagePath);
+      newImageData.push(imageData.url);
+      fs.unlinkSync(imagePath); // Remove the image after uploading
+    }
+
+    // If new images are provided, replace all existing images
+    let updatedImages;
+    if (newImageData.length > 0) {
+      updatedImages = newImageData;
+      // Remove all existing images from the file system
+      for (const img of existingImages) {
+        try {
+          const imageName = path.basename(img);
+          const fullPath = path.join(userDir, imageName);
+          if (fs.existsSync(fullPath)) {
+            fs.unlinkSync(fullPath); // Delete the old image from the file system
           }
-        } else {
-          console.log(`Image not found for deletion: ${fullPath}`);
+          console.log(`Deleted image: ${fullPath}`);
+        } catch (err) {
+          console.error(`Error deleting image: ${img}`, err);
         }
       }
-
-      // Upload new images
-      if (Array.isArray(files)) {
-        // Multiple images
-        for (const file of files) {
-          const imagePath = path.join(userDir, `${Date.now()}-${file.name}`);
-          fs.writeFileSync(imagePath, file.data);
-          console.log(`New image saved at: ${imagePath}`);
-          imagePaths.push(`products/${userID}/${Date.now()}-${file.name}`);
-        }
-      } else {
-        // Single image
-        const imagePath = path.join(userDir, `${Date.now()}-${files.name}`);
-        fs.writeFileSync(imagePath, files.data);
-        console.log(`New image saved at: ${imagePath}`);
-        imagePaths.push(`products/${userID}/${Date.now()}-${files.name}`);
-      }
-
-      // Update productData with the new image paths
-      formData.image = imagePaths.join(','); // Convert array to comma-separated string
     } else {
-      // If no new images are uploaded, retain the old ones
-      formData.image = existingProduct.image;
+      updatedImages = existingImages;
     }
 
-    // Update other product fields using form data
-    if (formData.discountPrice) {
-      formData.discount = true;
-    }
-    if (parseInt(formData.quantity) > 0) {
-      formData.stock = true;
-    }
+    const productData = JSON.parse(data);
+    productData.images = updatedImages;
+    productData.discount = Boolean(productData.discountPrice);
+    productData.stock = parseInt(productData.quantity) > 0;
+    productData.userID = userID;
 
-    formData.userID = userID;
-
-    // Update the product in the database using productID
+    // Update the product in the database
     const updatedProduct = await ProductModel.findByIdAndUpdate(
       productID,
-      formData, // Update with the formData directly
+      productData,
       { new: true }
-    ).lean(); // Use lean to avoid Mongoose object issues
+    );
 
     return {
       statusCode: 200,
       status: 'Success',
       message: 'Product updated successfully',
-      data: { updatedProduct: updatedProduct },
+      data: { updatedProduct },
     };
   } catch (error) {
     console.error(error);
     return {
       statusCode: 500,
       status: 'Failed',
-      message: error.toString(),
+      message: error.message || 'Internal Server Error',
     };
   }
 };
@@ -214,7 +208,7 @@ export const productDetailsService = async (req, res) => {
 
     const productID = req.params.id; // Extract productID from params
 
-    const product = await ProductModel.findById(productID).lean();
+    const product = await ProductModel.findById(productID);
     if (!product) {
       return {
         statusCode: 404,
@@ -234,6 +228,8 @@ export const productDetailsService = async (req, res) => {
   }
 };
 
+
+
 export const getProductByCategoryService = async (req, res) => {
   try {
     if (req.headers.role !== 'business') {
@@ -243,10 +239,12 @@ export const getProductByCategoryService = async (req, res) => {
         message: 'Unauthorized Access',
       };
     }
-    const category = req.params.category; // Extract category from params
+    const category = req.params.category.toLowerCase(); // Extract and convert category to lowercase
 
     // Retrieve products by category from the database
-    const products = await ProductModel.find({ categoryName: category}).lean();
+    const products = await ProductModel.find({
+      categoryName: { $regex: new RegExp('^' + category + '$', 'i') },
+    });
     if (!products || products.length === 0) {
       return {
         statusCode: 404,
@@ -265,7 +263,6 @@ export const getProductByCategoryService = async (req, res) => {
     return { statusCode: 500, status: 'Failed', message: error.toString() };
   }
 };
-
 
 export const getProductByIDService = async (req, res) => {
   try {
@@ -355,8 +352,7 @@ export const deleteProductByIDService = async (req) => {
         message: 'Product not found',
       };
     }
-    
-    
+
     // Check if the product belongs to the user
     if (existingProduct.userID.toString() !== userID) {
       return {
@@ -370,9 +366,20 @@ export const deleteProductByIDService = async (req) => {
     await ProductModel.findByIdAndDelete(productID);
 
     // Delete associated images from the file system
-    const oldImageNames = typeof existingProduct.image === 'string' ? existingProduct.image.split(',') : [];
+    const oldImageNames =
+      typeof existingProduct.image === 'string'
+        ? existingProduct.image.split(',')
+        : [];
     for (const imgName of oldImageNames) {
-      const fullPath = path.join(__dirname, '..', '..', 'public', 'products', userID, imgName);
+      const fullPath = path.join(
+        __dirname,
+        '..',
+        '..',
+        'public',
+        'products',
+        userID,
+        imgName
+      );
       if (fs.existsSync(fullPath)) {
         try {
           fs.unlinkSync(fullPath); // Delete the old image
@@ -395,15 +402,46 @@ export const deleteProductByIDService = async (req) => {
   }
 };
 
+
 export const deleteProductsService = async (req, res) => {
   try {
-    // Logic to delete all products
+    // Extract the array of product IDs from the request body
+    const { productIds } = req.body; // Assuming productIds is an array of IDs
+
+    if (!Array.isArray(productIds) || productIds.length === 0) {
+      return {
+        statusCode: 400,
+        status: 'Failed',
+        message: 'Invalid input, productIds should be a non-empty array.',
+      };
+    }
+
+    // Use Mongoose to delete the specified products
+    const result = await ProductModel.deleteMany({ _id: { $in: productIds } });
+
+    // Check if any products were deleted
+    if (result.deletedCount === 0) {
+      return {
+        statusCode: 404,
+        status: 'Failed',
+        message: 'No products found with the provided IDs.',
+      };
+    }
+
     return {
       statusCode: 200,
       status: 'Success',
-      message: 'All Products Deleted Successfully',
+      message: 'Products Deleted Successfully',
+      deletedCount: result.deletedCount, // Optional: include the count of deleted products
     };
   } catch (error) {
-    return { statusCode: 500, status: 'Failed', message: error.toString() };
+    console.error('Error deleting products:', error); // Log the error for debugging
+    return {
+      statusCode: 500,
+      status: 'Failed',
+      message: error.message || 'Internal Server Error',
+    };
   }
 };
+
+

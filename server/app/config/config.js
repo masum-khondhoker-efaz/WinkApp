@@ -27,3 +27,4 @@ export const SUCCESS_URL = '';
 export const FAIL_URL = '';
 export const CANCEL_URL = '';
 export const INIT_URL = '';
+

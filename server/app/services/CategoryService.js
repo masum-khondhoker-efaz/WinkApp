@@ -1,14 +1,21 @@
-
+import ProductModel from '../models/ProductModel.js';
 
 export const categoryListService = async (req, res) => {
   try {
-    // Logic to get products by category
+    const categories = await ProductModel.distinct('categoryName');
+
     return {
       statusCode: 200,
       status: 'Success',
-      message: 'Products Retrieved Successfully by Category',
+      message: 'Categories Retrieved Successfully',
+      data: categories,
     };
   } catch (error) {
-    return { statusCode: 500, status: 'Failed', message: error.toString() };
+    console.error(error); // Log the error for debugging
+    return {
+      statusCode: 500,
+      status: 'Failed',
+      message: error.message || 'Internal Server Error',
+    };
   }
 };

@@ -3,6 +3,7 @@ import router from './routes/api.js';
 import rateLimit from 'express-rate-limit';
 import cors from 'cors';
 import helmet from 'helmet';
+import bodyParser from 'body-parser';
 import cookieParser from 'cookie-parser';
 import * as path from 'node:path';
 import {
@@ -17,13 +18,13 @@ import {
   WEB_CACHE,
 } from './app/config/config.js';
 import fileUpload from 'express-fileupload';
-// import morgan from 'morgan';
 
 const app = express();
 
 // App use default middlewares
 app.use(cors());
-// app.use(morgan('tiny'));
+
+app.use(bodyParser.json());
 // app.morgan('tiny');
 app.use(express.json({ limit: MAX_JSON_SIZE }));
 app.use(express.urlencoded({ extended: URL_ENCODE }));
@@ -41,7 +42,7 @@ app.set('etag', WEB_CACHE);
 
 // Routes
 app.get('/', (req, res) => {
-  res.send('Hello from Express!');
+  res.send('Hello from WinkApp!');
 });
 app.use('/api', router);
 
@@ -55,4 +56,4 @@ app.get('*', (req, res) => {
   res.sendFile(path.resolve('client', 'dist', 'index.html'));
 });
 
-export default app; // Export for Vercel
+export default app; 

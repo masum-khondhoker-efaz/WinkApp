@@ -1,15 +1,13 @@
-import { 
+import {
   addProductService,
-  deleteProductByIDService, 
-  deleteProductsService, 
-  getProductByCategoryService, 
-  getProductByIDService, 
-  getProductsService, 
-  productDetailsService, 
-  updateProductService } 
-  from "../services/ProductService.js";
-
-
+  deleteProductByIDService,
+  deleteProductsService,
+  getProductByCategoryService,
+  getProductByIDService,
+  getProductsService,
+  productDetailsService,
+  updateProductService,
+} from '../services/ProductService.js';
 
 export const addProduct = async (req, res) => {
   let result = await addProductService(req, res);
@@ -50,5 +48,3 @@ export const deleteProducts = async (req, res) => {
   let result = await deleteProductsService(req, res);
   return res.status(result.statusCode).json(result);
 };
-
-
