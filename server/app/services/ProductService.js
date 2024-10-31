@@ -3,7 +3,7 @@ import path from 'path';
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
 import ProductModel from '../models/ProductModel.js';
-import { cloudinaryUploadImage } from '../middlewares/multerMiddleware.js';
+import { cloudinaryUploadImage } from '../middlewares/multermiddleware.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -79,7 +79,6 @@ export const addProductService = async (req, res) => {
     return { statusCode: 500, status: 'Failed', message: error.toString() };
   }
 };
-
 
 
 export const updateProductService = async (req, res) => {
@@ -194,8 +193,6 @@ export const updateProductService = async (req, res) => {
 };
 
 
-
-
 export const productDetailsService = async (req, res) => {
   try {
     if (req.headers.role !== 'business') {
@@ -227,7 +224,6 @@ export const productDetailsService = async (req, res) => {
     return { statusCode: 500, status: 'Failed', message: error.toString() };
   }
 };
-
 
 
 export const getProductByCategoryService = async (req, res) => {
@@ -264,6 +260,7 @@ export const getProductByCategoryService = async (req, res) => {
   }
 };
 
+
 export const getProductByIDService = async (req, res) => {
   try {
     if (req.headers.role !== 'business') {
@@ -297,6 +294,7 @@ export const getProductByIDService = async (req, res) => {
   }
 };
 
+
 export const getProductsService = async (req, res) => {
   try {
     const userID = req.headers.user_id;
@@ -309,7 +307,7 @@ export const getProductsService = async (req, res) => {
     }
 
     // Logic to get all products for the specific user_id
-    const products = await ProductModel.find({ userID }).lean();
+    const products = await ProductModel.find({ userID });
     if (!products || products.length === 0) {
       return {
         statusCode: 404,
@@ -328,6 +326,7 @@ export const getProductsService = async (req, res) => {
     return { statusCode: 500, status: 'Failed', message: error.toString() };
   }
 };
+
 
 export const deleteProductByIDService = async (req) => {
   try {
