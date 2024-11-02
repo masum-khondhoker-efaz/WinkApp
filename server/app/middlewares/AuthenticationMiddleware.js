@@ -14,11 +14,9 @@ export default (req, res, next) => {
     let decoded = TokenDecode(token);
 
     if (!decoded) {
-      return {
-        statusCode: 401,
-        status: 'Failed',
-        message: 'Unauthorized token',
-      };
+      return res
+        .status(401)
+        .json({ status: 'Failed', message: 'Unauthorized token' });
     }
 
     let { user_id, email, role } = decoded;

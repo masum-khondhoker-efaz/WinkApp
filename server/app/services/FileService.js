@@ -76,7 +76,6 @@ export const profileImageUploadService = async (req) => {
 };
 
 
-
 //! upload multiple images
 export const uploadMultipleFileService = async (req) => {
     console.log(req.files.file);

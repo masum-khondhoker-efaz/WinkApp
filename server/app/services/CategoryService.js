@@ -2,7 +2,15 @@ import ProductModel from '../models/ProductModel.js';
 
 export const categoryListService = async (req, res) => {
   try {
-    const categories = await ProductModel.distinct('categoryName');
+    const userID = req.headers.user_id;
+    const categories = await ProductModel.distinct('categoryName', { userID: userID });
+    if (!categories.length) {
+      return {
+      statusCode: 403,
+      status: 'Failed',
+      message: 'Forbidden: You do not have permission to view these categories',
+      };
+    }
 
     return {
       statusCode: 200,

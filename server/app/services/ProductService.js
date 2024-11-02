@@ -4,6 +4,7 @@ import { dirname } from 'path';
 import { fileURLToPath } from 'url';
 import ProductModel from '../models/ProductModel.js';
 import { cloudinaryUploadImage } from '../middlewares/multermiddleware.js';
+import { cloudinaryDeleteImage } from '../middlewares/multermiddleware.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -195,6 +196,7 @@ export const updateProductService = async (req, res) => {
 
 export const productDetailsService = async (req, res) => {
   try {
+    const userID = req.headers.user_id;
     if (req.headers.role !== 'business') {
       return {
         statusCode: 400,
@@ -213,6 +215,13 @@ export const productDetailsService = async (req, res) => {
         message: 'Product not found',
       };
     }
+    if (product.userID.toString() !== userID) {
+      return {
+        statusCode: 403,
+        status: 'Failed',
+        message: 'Forbidden: You do not have permission to view this product',
+      };
+    }
 
     return {
       statusCode: 200,
@@ -228,6 +237,9 @@ export const productDetailsService = async (req, res) => {
 
 export const getProductByCategoryService = async (req, res) => {
   try {
+    const userID = req.headers.user_id;
+    console.log(userID);
+    
     if (req.headers.role !== 'business') {
       return {
         statusCode: 400,
@@ -239,6 +251,7 @@ export const getProductByCategoryService = async (req, res) => {
 
     // Retrieve products by category from the database
     const products = await ProductModel.find({
+      userID: userID,
       categoryName: { $regex: new RegExp('^' + category + '$', 'i') },
     });
     if (!products || products.length === 0) {
@@ -246,6 +259,16 @@ export const getProductByCategoryService = async (req, res) => {
         statusCode: 404,
         status: 'Failed',
         message: 'No products found in this category',
+      };
+    }
+    // Filter products by userID
+    const filteredProducts = products.filter(product => product.userID.toString() === userID);
+
+    if (filteredProducts.length === 0) {
+      return {
+      statusCode: 404,
+      status: 'Failed',
+      message: 'No products found in this category for this user',
       };
     }
 
@@ -263,6 +286,7 @@ export const getProductByCategoryService = async (req, res) => {
 
 export const getProductByIDService = async (req, res) => {
   try {
+    const userID = req.headers.user_id;
     if (req.headers.role !== 'business') {
       return {
         statusCode: 400,
@@ -273,7 +297,14 @@ export const getProductByIDService = async (req, res) => {
     const productID = req.params.id; // Get product ID from request parameters
 
     // Logic to get product by ID
-    const product = await ProductModel.findById(productID); // Use lean() to return a plain JavaScript object
+    const product = await ProductModel.findById(productID); 
+    if (product.userID.toString() !== userID) {
+      return {
+      statusCode: 403,
+      status: 'Failed',
+      message: 'Forbidden: You do not have permission to view this product',
+      };
+    }
 
     if (!product || product.length === 0) {
       return {
@@ -307,12 +338,13 @@ export const getProductsService = async (req, res) => {
     }
 
     // Logic to get all products for the specific user_id
-    const products = await ProductModel.find({ userID });
+    const products = await ProductModel.find({ userID : userID });
     if (!products || products.length === 0) {
       return {
-        statusCode: 404,
-        status: 'Failed',
+        statusCode: 200,
+        status: 'Success',
         message: 'No products found for this user',
+        data:  products ,
       };
     }
 
@@ -361,35 +393,20 @@ export const deleteProductByIDService = async (req) => {
       };
     }
 
-    // Delete the product from the database
-    await ProductModel.findByIdAndDelete(productID);
-
-    // Delete associated images from the file system
-    const oldImageNames =
-      typeof existingProduct.image === 'string'
-        ? existingProduct.image.split(',')
-        : [];
-    for (const imgName of oldImageNames) {
-      const fullPath = path.join(
-        __dirname,
-        '..',
-        '..',
-        'public',
-        'products',
-        userID,
-        imgName
-      );
-      if (fs.existsSync(fullPath)) {
+    // Delete associated images from Cloudinary
+    if (Array.isArray(existingProduct.images)) {
+      for (const imageUrl of existingProduct.images) {
         try {
-          fs.unlinkSync(fullPath); // Delete the old image
-          console.log(`Deleted image: ${fullPath}`);
-        } catch (err) {
-          console.error(`Error deleting image: ${fullPath}`, err);
+          const result = await cloudinaryDeleteImage(imageUrl);
+          console.log(`Deleted image result for URL ${imageUrl}: ${JSON.stringify(result)}`);
+        } catch (error) {
+          console.error(`Error deleting image with URL ${imageUrl}: ${error.message}`);
         }
-      } else {
-        console.log(`Image not found for deletion: ${fullPath}`);
       }
     }
+
+    // Delete the product from the database
+    await ProductModel.findByIdAndDelete(productID);
 
     return {
       statusCode: 200,
@@ -404,7 +421,7 @@ export const deleteProductByIDService = async (req) => {
 
 export const deleteProductsService = async (req, res) => {
   try {
-    // Extract the array of product IDs from the request body
+    const userID = req.headers.user_id;
     const { productIds } = req.body; // Assuming productIds is an array of IDs
 
     if (!Array.isArray(productIds) || productIds.length === 0) {
@@ -415,15 +432,45 @@ export const deleteProductsService = async (req, res) => {
       };
     }
 
-    // Use Mongoose to delete the specified products
-    const result = await ProductModel.deleteMany({ _id: { $in: productIds } });
+    // Retrieve the products to get their image URLs
+    const products = await ProductModel.find({
+      _id: { $in: productIds },
+      userID: userID,
+    });
 
-    // Check if any products were deleted
+    // Delete images from Cloudinary
+    for (const product of products) {
+      if (Array.isArray(product.images)) {
+        for (const imageUrl of product.images) {
+          try {
+            const result = await cloudinaryDeleteImage(imageUrl);
+            console.log(
+              `Deleted image result for URL ${imageUrl}: ${JSON.stringify(
+                result
+              )}`
+            );
+          } catch (error) {
+            console.error(
+              `Error deleting image with URL ${imageUrl}: ${error.message}`
+            );
+          }
+        }
+      } else {
+        console.warn(`No images found for product ID ${product._id}`);
+      }
+    }
+
+    // Use Mongoose to delete the specified products
+    const result = await ProductModel.deleteMany({
+      _id: { $in: productIds },
+      userID: userID,
+    });
+
     if (result.deletedCount === 0) {
       return {
         statusCode: 404,
         status: 'Failed',
-        message: 'No products found with the provided IDs.',
+        message: 'No products found with the provided IDs for this user.',
       };
     }
 
@@ -431,10 +478,10 @@ export const deleteProductsService = async (req, res) => {
       statusCode: 200,
       status: 'Success',
       message: 'Products Deleted Successfully',
-      deletedCount: result.deletedCount, // Optional: include the count of deleted products
+      deletedCount: result.deletedCount,
     };
   } catch (error) {
-    console.error('Error deleting products:', error); // Log the error for debugging
+    console.error('Error deleting products:', error);
     return {
       statusCode: 500,
       status: 'Failed',
