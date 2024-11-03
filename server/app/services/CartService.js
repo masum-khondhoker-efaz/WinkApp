@@ -160,7 +160,6 @@ export const updateToCartService = async (req, res) => {
 };
 
 
-
 export const deleteToCartService = async (req, res) => {
   try {
     const userID = req.headers.user_id;

@@ -7,6 +7,7 @@ import * as ProductController from '../app/controllers/ProductController.js';
 import * as CategoryController from '../app/controllers/CategoryController.js';
 import * as CustomerController from '../app/controllers/CustomerController.js';
 import * as CartController from '../app/controllers/CartController.js';
+import * as OrderController from '../app/controllers/OrderController.js';
 
 const router = express.Router();
 
@@ -119,27 +120,27 @@ router.delete(
 router.post(
   '/create-order',
   AuthenticationMiddleware,
-  CustomerController.createOrder
+    OrderController.createOrder
 );
 router.put(
   '/update-order/:id',
   AuthenticationMiddleware,
-  CustomerController.updateOrder
+    OrderController.updateOrder
 );
 router.get(
   '/order-details/:id',
   AuthenticationMiddleware,
-  CustomerController.getOrderDetails
+    OrderController.getOrderDetails
 );
 router.get(
   '/orders',
   AuthenticationMiddleware,
-  CustomerController.getAllOrders
+    OrderController.getAllOrders
 );
 router.delete(
   '/delete-order/:id',
   AuthenticationMiddleware,
-  CustomerController.deleteOrder
+    OrderController.deleteOrder
 );
 
 
