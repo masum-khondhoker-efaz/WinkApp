@@ -3,6 +3,10 @@ import AuthenticationMiddleware from '../app/middlewares/AuthenticationMiddlewar
 import * as UsersControllers from '../app/controllers/UsersControllers.js';
 import * as ProfileControllers from '../app/controllers/ProfileControllers.js';
 import * as FileController from '../app/controllers/FileController.js';
+import * as ProductController from '../app/controllers/ProductController.js';
+import * as CategoryController from '../app/controllers/CategoryController.js';
+import * as CustomerController from '../app/controllers/CustomerController.js';
+import * as CartController from '../app/controllers/CartController.js';
 
 const router = express.Router();
 
@@ -12,22 +16,146 @@ router.post('/individual-register', UsersControllers.individualRegister);
 router.post('/business-register', UsersControllers.businessRegister);
 router.post('/verify-otp', UsersControllers.verifyOtp);
 
-
 // user profile
-router.get('/profile', AuthenticationMiddleware, ProfileControllers.userProfile);
-router.post('/profile-update', AuthenticationMiddleware, ProfileControllers.profileUpdate);
-
+router.get(
+  '/profile',
+  AuthenticationMiddleware,
+  ProfileControllers.userProfile
+);
+router.post(
+  '/profile-update',
+  AuthenticationMiddleware,
+  ProfileControllers.profileUpdate
+);
 
 // File upload and download routes
-router.post('/profile-image-upload', AuthenticationMiddleware, FileController.profileImageUpload);
+router.post(
+  '/profile-image-upload',
+  AuthenticationMiddleware,
+  FileController.profileImageUpload
+);
 router.delete('/delete-single-file/:fileName', FileController.deleteSingleFile);
 router.get('/read-file/:fileName', FileController.getUploadFile);
 
 router.post('/upload-multiple-file', FileController.uploadMultipleFile);
 router.delete('/delete-multiple-file', FileController.deleteMultipleFile);
 
+//Business Profile Routes
+// router.post('/add-products', AuthenticationMiddleware, upload.uploadMultipleFile('product-images'), ProductController.addProduct);
+router.post(
+  '/add-products',
+  AuthenticationMiddleware,
+  ProductController.addProduct
+);
+router.put(
+  '/update-product/:id',
+  AuthenticationMiddleware,
+  ProductController.updateProduct
+);
+router.get(
+  '/product-details/:id',
+  AuthenticationMiddleware,
+  ProductController.productDetails
+);
+router.get(
+  '/products-by-category/:category',
+  AuthenticationMiddleware,
+  ProductController.getProductByCategory
+);
+router.get(
+  '/product/:id',
+  AuthenticationMiddleware,
+  ProductController.getProductByID
+);
+router.get(
+  '/products',
+  AuthenticationMiddleware,
+  ProductController.getProducts
+);
+router.delete(
+  '/delete-product/:id',
+  AuthenticationMiddleware,
+  ProductController.deleteProductByID
+);
+router.delete(
+  '/delete-products',
+  AuthenticationMiddleware,
+  ProductController.deleteProducts
+);
+router.get(
+  '/category-list',
+  AuthenticationMiddleware,
+  CategoryController.categoryList
+);
 
 
+//Customer order Routes
+router.post(
+  '/add-to-cart/:id',
+  AuthenticationMiddleware,
+  CartController.addToCart
+);
+
+router.get(
+  '/get-all-cart',
+   AuthenticationMiddleware, 
+   CartController.getAllCart);
 
 
+router.put(
+  '/update-to-cart/:id',
+  AuthenticationMiddleware,
+  CartController.updateToCart
+);
+
+router.delete(
+  '/delete-to-cart/:id',
+  AuthenticationMiddleware,
+  CartController.deleteToCart
+);
+
+
+// Order management routes for the customer
+router.post(
+  '/create-order',
+  AuthenticationMiddleware,
+  CustomerController.createOrder
+);
+router.put(
+  '/update-order/:id',
+  AuthenticationMiddleware,
+  CustomerController.updateOrder
+);
+router.get(
+  '/order-details/:id',
+  AuthenticationMiddleware,
+  CustomerController.getOrderDetails
+);
+router.get(
+  '/orders',
+  AuthenticationMiddleware,
+  CustomerController.getAllOrders
+);
+router.delete(
+  '/delete-order/:id',
+  AuthenticationMiddleware,
+  CustomerController.deleteOrder
+);
+
+
+// router.get(
+//   '/get-all-orders',
+//   AuthenticationMiddleware,
+//   OrderController.createOrder
+// );
+// router.get(
+//   '/get-order-details/:id',
+//   AuthenticationMiddleware,
+//   OrderController.updateOrder
+// );
+// router.put(
+//   '/update-order-status/:id',
+//   AuthenticationMiddleware,
+//   OrderController.getOrderDetails
+// );
 export default router;
