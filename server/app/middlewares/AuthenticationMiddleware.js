@@ -23,7 +23,7 @@ export default (req, res, next) => {
     req.headers.user_id = user_id;
     req.headers.email = email;
     req.headers.role = role;
-    
+
     next();
   } catch (error) {
     return res

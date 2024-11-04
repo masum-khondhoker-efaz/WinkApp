@@ -12,6 +12,10 @@ const BusinessSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    image: {
+      type: String,
+      required: true,
+    },
     tradeLicenseNumber: {
       type: String,
       required: true,

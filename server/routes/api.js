@@ -9,6 +9,7 @@ import * as CustomerController from '../app/controllers/CustomerController.js';
 import * as CartController from '../app/controllers/CartController.js';
 import * as OrderController from '../app/controllers/OrderController.js';
 import * as BusinessController from '../app/controllers/BusinessController.js';
+import * as WishController from '../app/controllers/WishController.js';
 
 const router = express.Router();
 
@@ -91,7 +92,7 @@ router.get(
 );
 
 
-//Customer order Routes
+//Customer cart Routes
 router.post(
   '/add-to-cart/:id',
   AuthenticationMiddleware,
@@ -116,6 +117,22 @@ router.delete(
   CartController.deleteToCart
 );
 
+//Customer wish list routes
+router.post(
+  '/add-to-wish',
+  AuthenticationMiddleware,
+  WishController.addToWish
+);
+router.get(
+  '/get-all-wish',
+  AuthenticationMiddleware,
+  WishController.getAllWish
+);
+router.delete(
+  '/delete-to-wish/:id',
+  AuthenticationMiddleware,
+  WishController.deleteToWish
+);
 
 // Order management routes for the customer
 router.post(
@@ -179,7 +196,7 @@ router.get(
 
 
 router.get(
-  '/product-details/:id',
+  '/detail-product/:id',
   AuthenticationMiddleware,
   CustomerController.getProductDetailsByID
 );

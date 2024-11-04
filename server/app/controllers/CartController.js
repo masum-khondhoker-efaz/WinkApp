@@ -7,6 +7,8 @@ export const addToCart = async (req, res) => {
   return res.status(result.statusCode).json(result);
 };
 
+
+
 export const getAllCart = async (req, res) => {
   let result = await getAllCartService(req, res);
   return res.status(result.statusCode).json(result);

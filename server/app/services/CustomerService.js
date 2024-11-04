@@ -200,14 +200,14 @@ export const getProductDetailsByIDService = async (req, res) => {
   try {
     const userID = req.headers.user_id;
     const userRole = req.headers.role;
-
+    console.log('User Role:', userRole);
+    
     // Optionally, you might want to check the user role here
-    if (!userRole || userRole !== 'individual') {
+    if (userRole !== 'individual') {
       return {
-        statusCode: 403,
+        statusCode: 401,
         status: 'Failed',
-        message:
-          'Forbidden: You do not have permission to access this resource.',
+        message: 'Unauthorized Access',
       };
     }
 

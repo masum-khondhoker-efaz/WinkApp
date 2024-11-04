@@ -11,14 +11,18 @@ const IndividualSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    address: {  
+    image: {
+      type: String,
+      required: true,
+    },
+    address: {
       type: String,
     },
   },
   {
     timestamps: true,
     versionKey: false,
-  }    
+  }
 );
 
 const IndividualModel = mongoose.model('individuals', IndividualSchema);

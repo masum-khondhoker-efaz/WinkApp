@@ -15,7 +15,9 @@ export const getShopByID = async (req, res) => {
   return res.status(result.statusCode).json(result);
 };
 
-export const getProductDetailsByID = async (req, res) => {  
+export const getProductDetailsByID = async (req, res) => { 
+    console.log('Inside getProductDetailsByID');
+
   let result = await getProductDetailsByIDService(req, res);
   return res.status(result.statusCode).json(result);
 };
