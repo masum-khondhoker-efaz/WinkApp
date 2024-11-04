@@ -8,6 +8,7 @@ import * as CategoryController from '../app/controllers/CategoryController.js';
 import * as CustomerController from '../app/controllers/CustomerController.js';
 import * as CartController from '../app/controllers/CartController.js';
 import * as OrderController from '../app/controllers/OrderController.js';
+import * as BusinessController from '../app/controllers/BusinessController.js';
 
 const router = express.Router();
 
@@ -42,7 +43,7 @@ router.post('/upload-multiple-file', FileController.uploadMultipleFile);
 router.delete('/delete-multiple-file', FileController.deleteMultipleFile);
 
 //Business Profile Routes
-// router.post('/add-products', AuthenticationMiddleware, upload.uploadMultipleFile('product-images'), ProductController.addProduct);
+
 router.post(
   '/add-products',
   AuthenticationMiddleware,
@@ -144,19 +145,22 @@ router.delete(
 );
 
 
-// router.get(
-//   '/get-all-orders',
-//   AuthenticationMiddleware,
-//   OrderController.createOrder
-// );
-// router.get(
-//   '/get-order-details/:id',
-//   AuthenticationMiddleware,
-//   OrderController.updateOrder
-// );
-// router.put(
-//   '/update-order-status/:id',
-//   AuthenticationMiddleware,
-//   OrderController.getOrderDetails
-// );
+// Business order management routes
+router.get(
+  '/get-all-orders',
+  AuthenticationMiddleware,
+  BusinessController.getAllOrders
+);
+router.get(
+  '/get-order-details/:id',
+  AuthenticationMiddleware,
+  BusinessController.getOrderDetails
+);
+router.put(
+  '/update-order-status/:id',
+  AuthenticationMiddleware,
+  BusinessController.updateOrderStatus
+);
+
+
 export default router;

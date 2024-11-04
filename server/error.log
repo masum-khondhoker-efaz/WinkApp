@@ -75,3 +75,5 @@ Your Requested /api/update-to-cart/566 || Error: Your Requested /api/update-to-c
 Your Requested /api/delete-to-cart/67249e8651e34714ffcf3073 || Error: Your Requested /api/delete-to-cart/67249e8651e34714ffcf3073 || Sat Nov 02 2024 18:11:48 GMT+0600 (Bangladesh Standard Time)
 Your Requested /api/delete-to-cart/67249e8651e34714ffcf3073 || Error: Your Requested /api/delete-to-cart/67249e8651e34714ffcf3073 || Sat Nov 02 2024 18:12:17 GMT+0600 (Bangladesh Standard Time)
 Your Requested /api/delete-to-cart/67249e8651e34714ffcf3073 || Error: Your Requested /api/delete-to-cart/67249e8651e34714ffcf3073 || Sat Nov 02 2024 18:12:56 GMT+0600 (Bangladesh Standard Time)
+Your Requested /api/get-order-details/6727ab3518d3e76419ab0a94 || Error: Your Requested /api/get-order-details/6727ab3518d3e76419ab0a94 || Mon Nov 04 2024 10:19:31 GMT+0600 (Bangladesh Standard Time)
+Your Requested /api/get-order-details/6727ab3518d3e76419ab0a94 || Error: Your Requested /api/get-order-details/6727ab3518d3e76419ab0a94 || Mon Nov 04 2024 10:21:37 GMT+0600 (Bangladesh Standard Time)
