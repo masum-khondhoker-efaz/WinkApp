@@ -163,4 +163,27 @@ router.put(
 );
 
 
+// Customer products and shop  routes
+router.get(
+  '/shop-products',
+  AuthenticationMiddleware,
+  CustomerController.getAllShopsAndProducts
+);
+
+router.get(
+  '/shop/:id',
+  AuthenticationMiddleware,
+  CustomerController.getShopByID
+);
+
+
+
+router.get(
+  '/product-details/:id',
+  AuthenticationMiddleware,
+  CustomerController.getProductDetailsByID
+);
+
+
+
 export default router;

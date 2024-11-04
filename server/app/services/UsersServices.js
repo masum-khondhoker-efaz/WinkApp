@@ -18,7 +18,7 @@ const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.(com|org|net|edu|gov|mil|
 export const loginService = async (req,res) => {
   try {
     
-    let { email, phone, password, rememberMe } = req.body;
+    let { email, phone, password } = req.body;
 
     let data = await UsersModel.aggregate([
       { $match: { email, phone } },
@@ -305,7 +305,6 @@ export const businessRegisterService = async (req, res) => {
     session.endSession(); // End session
   }
 };
-
 
 
 

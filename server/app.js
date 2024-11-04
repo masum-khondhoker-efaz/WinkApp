@@ -4,7 +4,6 @@ import rateLimit from 'express-rate-limit';
 import cors from 'cors';
 import helmet from 'helmet';
 import bodyParser from 'body-parser';
-import cookieParser from 'cookie-parser';
 import * as path from 'node:path';
 import {
   DefaultErrorHandler,
@@ -29,7 +28,6 @@ app.use(bodyParser.json());
 app.use(express.json({ limit: MAX_JSON_SIZE }));
 app.use(express.urlencoded({ extended: URL_ENCODE }));
 app.use(helmet());
-app.use(cookieParser());
 // Middleware to parse incoming request bodies
 app.use(express.static('public'));
 app.use(fileUpload()); // Enable file uploads

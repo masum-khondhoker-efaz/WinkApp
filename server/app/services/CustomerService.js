@@ -1,6 +1,10 @@
+import BusinessModel from '../models/BusinessesModel.js';
+import ProductModel from '../models/ProductModel.js';
 
 
-export const createOrderService = async (req, res) => {
+
+
+export const getAllShopsAndProductsService = async (req, res) => {
   try {
     const userID = req.headers.user_id;
     const userRole = req.headers.role;
@@ -12,39 +16,162 @@ export const createOrderService = async (req, res) => {
       };
     }
 
-    return {
-      statusCode: 201,
-      status: 'Success',
-      message: 'Order created successfully',
-    };
-  } catch (error) {
-    return { statusCode: 500, status: 'Failed', message: error.toString() };
-  }
-};
+    const { search, page = 1, limit = 10, searchType } = req.query;
+    let data = [];
+    let total = 0;
 
-export const updateOrderService = async (req, res) => {
-  try {
-    const userID = req.headers.user_id;
-    const userRole = req.headers.role;
-    if (userRole !== 'individual') {
+    // Case 1: If no search query is provided, retrieve all businesses and their products
+    if (!search) {
+      const businesses = await BusinessModel.find()
+        .skip((page - 1) * limit)
+        .limit(parseInt(limit))
+        .exec();
+
+      const products = await ProductModel.find()
+        .skip((page - 1) * limit)
+        .limit(parseInt(limit))
+        .exec();
+
+      const totalBusinesses = await BusinessModel.countDocuments();
+      const totalProducts = await ProductModel.countDocuments();
+
       return {
-        statusCode: 401,
-        status: 'Failed',
-        message: 'Unauthorized Access',
+        statusCode: 200,
+        status: 'Success',
+        data: {
+          businesses,
+          products,
+        },
+        totalBusinesses,
+        totalProducts,
+        page: parseInt(page),
+        limit: parseInt(limit),
+      };
+    }
+
+    // Case 2: Search by Business Name
+    if (!searchType || searchType === 'business') {
+      if (!search) {
+        return {
+          statusCode: 400,
+          status: 'Failed',
+          message: 'Search term is required for business search',
+        };
+      }
+
+      const businessQuery = { businessName: { $regex: search, $options: 'i' } };
+
+      data = await BusinessModel.find(businessQuery, 'businessName userID')
+        .skip((page - 1) * limit)
+        .limit(parseInt(limit))
+        .exec();
+
+      total = await BusinessModel.countDocuments(businessQuery);
+
+      if (data.length === 0) {
+        return {
+          statusCode: 404,
+          status: 'Failed',
+          message: 'Business not found',
+        };
+      }
+
+      return {
+        statusCode: 200,
+        status: 'Success',
+        data,
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+      };
+    }
+
+    // Case 3: Search by Product Name
+    else if (searchType === 'product') {
+      if (!search) {
+        return {
+          statusCode: 400,
+          status: 'Failed',
+          message: 'Search term is required for product search',
+        };
+      }
+
+      const productQuery = {
+        $or: [
+          { title: { $regex: search, $options: 'i' } },
+          { shortDescription: { $regex: search, $options: 'i' } },
+        ],
+      };
+
+      data = await ProductModel.aggregate([
+        { $match: productQuery },
+        {
+          $lookup: {
+            from: 'businesses',
+            localField: 'userID',
+            foreignField: 'userID',
+            as: 'business',
+          },
+        },
+        { $unwind: '$business' },
+        {
+          $project: {
+            title: 1,
+            shortDescription: 1,
+            price: 1,
+            'business.businessName': 1,
+          },
+        },
+        { $skip: (page - 1) * limit },
+        { $limit: parseInt(limit) },
+      ]).exec();
+
+      total = await ProductModel.countDocuments(productQuery);
+
+      if (data.length === 0) {
+        return {
+          statusCode: 404,
+          status: 'Failed',
+          message: 'Product not found',
+        };
+      }
+
+      const safeData = data.map((product) => ({
+        title: product.title,
+        shortDescription: product.shortDescription,
+        price: product.price,
+        businessName: product.business.businessName,
+      }));
+
+      return {
+        statusCode: 200,
+        status: 'Success',
+        data: safeData,
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
       };
     }
 
     return {
       statusCode: 200,
       status: 'Success',
-      message: 'Order updated successfully',
+      data,
+      total,
+      page: parseInt(page),
+      limit: parseInt(limit),
     };
   } catch (error) {
-    return { statusCode: 500, status: 'Failed', message: error.toString() };
+    return {
+      statusCode: 500,
+      status: 'Failed',
+      message: error.toString(),
+    };
   }
 };
 
-export const getOrderDetailsService = async (req, res) => {
+
+export const getShopByIDService = async (req, res) => {
   try {
     const userID = req.headers.user_id;
     const userRole = req.headers.role;
@@ -55,58 +182,66 @@ export const getOrderDetailsService = async (req, res) => {
         message: 'Unauthorized Access',
       };
     }
-
+    const businessID = req.params.id;
+    const business = await BusinessModel.findOne({ userID: businessID });
     return {
       statusCode: 200,
       status: 'Success',
-      message: 'All Orders retrieved successfully',
+      data: business,
     };
   } catch (error) {
     return { statusCode: 500, status: 'Failed', message: error.toString() };
   }
 };
 
-export const getAllOrdersService = async (req, res) => {
+
+
+export const getProductDetailsByIDService = async (req, res) => {
   try {
     const userID = req.headers.user_id;
     const userRole = req.headers.role;
-    if (userRole !== 'individual') {
+
+    // Optionally, you might want to check the user role here
+    if (!userRole || userRole !== 'individual') {
       return {
-        statusCode: 401,
+        statusCode: 403,
         status: 'Failed',
-        message: 'Unauthorized Access',
+        message:
+          'Forbidden: You do not have permission to access this resource.',
       };
     }
 
-    return {
-      statusCode: 200,
-      status: 'Success',
-      message: 'Orders retrieved successfully',
-    };
-  } catch (error) {
-    return { statusCode: 500, status: 'Failed', message: error.toString() };
-  }
-};
+    const productID = req.params.id;
 
-export const deleteOrderService = async (req, res) => {
-  try {
-    const userID = req.headers.user_id;
-    const userRole = req.headers.role;
-    if (userRole !== 'individual') {
+    // Find the product by ID
+    const product = await ProductModel.findById({_id:productID});
+
+    if (!product) {
       return {
-        statusCode: 401,
+        statusCode: 404,
         status: 'Failed',
-        message: 'Unauthorized Access',
+        message: 'Product not found',
       };
     }
 
+    // Send the found product details in response
     return {
       statusCode: 200,
       status: 'Success',
-      message: 'Order  deleted successfully',
+      data: product,
     };
   } catch (error) {
-    return { statusCode: 500, status: 'Failed', message: error.toString() };
+    console.error(error); // Log the error for debugging
+    return {
+      statusCode: 500,
+      status: 'Failed',
+      message: error.toString(),
+    };
   }
 };
+
+
+
+
+
 
