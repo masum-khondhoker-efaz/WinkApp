@@ -1,25 +1,25 @@
 import mongoose from 'mongoose';
 
 
-const WishSchema = new mongoose.Schema({
-  userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'users',
-    required: true,
+const WishSchema = new mongoose.Schema(
+  {
+    userID: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'users',
+      required: true,
+    },
+    productID: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'products',
+      required: true,
+    },
   },
-  title: {
-    type: String,
-    required: true,
-  },
-  description: {
-    type: String,
-    required: true,
-  },
-},
-{
-  timestamps: true,
-  versionKey: false,
-}
+  {
+    timestamps: true,
+    versionKey: false,
+  }
 );
 
-module.exports = mongoose.model('Wish', WishSchema);
+const WishModel= mongoose.model('wishes', WishSchema);
+
+export default WishModel;

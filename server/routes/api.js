@@ -119,7 +119,7 @@ router.delete(
 
 //Customer wish list routes
 router.post(
-  '/add-to-wish',
+  '/add-to-wish/:id',
   AuthenticationMiddleware,
   WishController.addToWish
 );
