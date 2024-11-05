@@ -37,11 +37,11 @@ router.post(
   AuthenticationMiddleware,
   FileController.profileImageUpload
 );
-router.delete('/delete-single-file/:fileName', FileController.deleteSingleFile);
-router.get('/read-file/:fileName', FileController.getUploadFile);
+// router.delete('/delete-single-file/:fileName', FileController.deleteSingleFile);
+// router.get('/read-file/:fileName', FileController.getUploadFile);
 
-router.post('/upload-multiple-file', FileController.uploadMultipleFile);
-router.delete('/delete-multiple-file', FileController.deleteMultipleFile);
+// router.post('/upload-multiple-file', FileController.uploadMultipleFile);
+// router.delete('/delete-multiple-file', FileController.deleteMultipleFile);
 
 //Business Profile Routes
 
