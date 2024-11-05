@@ -2,7 +2,9 @@ import {
   loginService,
   individualRegisterService,
   businessRegisterService,
-  verifyOtpService
+  verifyOtpService,
+  resetPasswordIntoDBService,
+  forgetPasswordService,
 } from '../services/UsersServices.js';
 
 
@@ -29,3 +31,13 @@ export const verifyOtp = async (req, res) => {
   return res.status(result.statusCode).json(result);
 };
 
+export const forgotPassword = async (req, res) => {
+  const result = await forgetPasswordService(req.body);
+  return res.status(result.statusCode).json(result);
+};
+
+
+export const resetPassword = async (req, res) => {
+  const result = await resetPasswordIntoDBService(req,res);
+  return res.status(result.statusCode).json(result);
+};

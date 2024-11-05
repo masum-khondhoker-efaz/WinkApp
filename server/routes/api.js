@@ -19,6 +19,9 @@ router.post('/individual-register', UsersControllers.individualRegister);
 router.post('/business-register', UsersControllers.businessRegister);
 router.post('/verify-otp', UsersControllers.verifyOtp);
 
+router.post('/forget-password', UsersControllers.forgotPassword);
+router.put('/reset-password', UsersControllers.resetPassword);
+
 // user profile
 router.get(
   '/profile',

@@ -394,6 +394,97 @@ export const verifyOtpService = async (req, res) => {
 };
 
 
+// Send a password reset email to the user's registered email address
+export const forgetPasswordService = async (payload) => {
+  const session = await mongoose.startSession(); // Start a session
+  session.startTransaction();
+
+  try {
+    const email = payload.email;
+    const user = await UsersModel.findOne({ email: email });
+
+    if (!user) {
+      return { statusCode: 404, status: 'Failed', message: 'User not found' };
+    }
+
+    // Generate a 4-digit OTP
+    const otp = Math.floor(1000 + Math.random() * 9000).toString();
+    const hashedOtp = await bcrypt.hash(otp, 10);
+
+    const EmailText = `We received a request to reset your password. Verify for forget password using this OTP : ${otp}`;
+    const EmailSubject = `OTP for reset password from WinkApp`;
+    const emailSent = await SendEmail(email, EmailText, EmailSubject);
+    if (!emailSent) {
+      return {
+        statusCode: 500,
+        status: 'Failed',
+        message: 'Failed to send OTP.',
+      };
+    }
+
+    // Update the user with the new OTP and expiration time
+    user.otp = hashedOtp;
+    user.validOtp = false;
+    user.otpExpiration = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes from now
+    await user.save({ session });
+
+    // Generate JWT token
+    const token = jwt.sign(
+      {
+        email: email,
+        role: user.role,
+        user_id: user._id,
+      },
+      process.env.JWT_SECRET_KEY,
+      { expiresIn: '5m' }
+    );
+
+    await session.commitTransaction();
+    return {
+      statusCode: 200,
+      status: 'Success',
+      message: 'Check your email',
+      data: { token: token },
+    };
+  } catch (error) {
+    await session.abortTransaction(); // Rollback on error
+    return { statusCode: 500, status: 'Failed', message: error.toString() };
+  } finally {
+    session.endSession(); // End the session
+  }
+};
+
+
+// Reset password with the new password
+export const  resetPasswordIntoDBService = async (req) => {
+  
+
+  try {
+    const { email, password } = req.body;
+    const user = await UsersModel.findOne({ email });
+
+    if (!user) {
+      return {
+        statusCode: 401,
+        status: 'Failed',
+        message: 'User not found with this email',
+      };
+    }
+
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    await UsersModel.updateOne({ email: email }, { password: hashedPassword });
+    return {
+      statusCode: 200,
+      status: 'Success',
+      message: 'Reset Password Successful',
+    };
+  } catch (error) {
+    return { statusCode: 500, status: 'Failed', message: error.toString() };
+  }
+};
+
 
 
 

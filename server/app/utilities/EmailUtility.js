@@ -51,6 +51,16 @@ const SendEmail = async (EmailTo, EmailText, EmailSubject) => {
     to: EmailTo,
     subject: EmailSubject,
     text: EmailText,
+    html: `
+     <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+          <p>Dear ${EmailTo},</p>
+
+          <p> ${EmailText}.</p>
+
+          <p>If you did not request a for this service, please ignore this email or contact support if you have any concerns.</p>
+
+          <p>Thank you,<br>WinkApp</p>
+    </div>`,
   };
 
   return await transporter.sendMail(mailOptions);
