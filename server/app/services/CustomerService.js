@@ -37,12 +37,13 @@ export const getAllShopsAndProductsService = async (req, res) => {
             businessName: 1,
             tradeLicenseNumber: 1,
             location: 1,
-            'user.image': 1,
+            image: '$user.image', // Flatten the image field here
           },
         },
         { $skip: (page - 1) * limit },
         { $limit: parseInt(limit) },
       ]);
+
 
       const products = await ProductModel.find()
         .skip((page - 1) * limit)
@@ -92,7 +93,7 @@ export const getAllShopsAndProductsService = async (req, res) => {
           $project: {
             businessName: 1,
             userID: 1,
-            'user.image': 1,
+            image: '$user.image', // Flatten the image field here
           },
         },
         { $skip: (page - 1) * limit },
