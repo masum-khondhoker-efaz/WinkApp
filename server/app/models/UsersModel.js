@@ -19,18 +19,18 @@ const UserSchema = new mongoose.Schema(
     image: {
       type: String,
     },
-      otp: {
-          type: String,
-      },
-      verifiedOtp: {
-          type: Boolean,
-          required: true,
-          default: false,
-      },
-      otpExpiration: {
-          type: Date,
-          default: null,
-      },
+    otp: {
+        type: String,
+    },
+    verifiedOtp: {
+        type: Boolean,
+        required: true,
+        default: false,
+    },
+    otpExpiration: {
+        type: Date,
+        default: null,
+    },
     image: {
       type: String,
     },

@@ -22,15 +22,31 @@ export const getAllShopsAndProductsService = async (req, res) => {
 
     // Case 1: If no search query is provided, retrieve all businesses and their products
     if (!search) {
-      const businesses = await BusinessModel.find()
-        .skip((page - 1) * limit)
-        .limit(parseInt(limit))
-        .exec();
+      const businesses = await BusinessModel.aggregate([
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'userID',
+            foreignField: '_id',
+            as: 'user',
+          },
+        },
+        { $unwind: '$user' },
+        {
+          $project: {
+            businessName: 1,
+            tradeLicenseNumber: 1,
+            location: 1,
+            'user.image': 1,
+          },
+        },
+        { $skip: (page - 1) * limit },
+        { $limit: parseInt(limit) },
+      ]);
 
       const products = await ProductModel.find()
         .skip((page - 1) * limit)
-        .limit(parseInt(limit))
-        .exec();
+        .limit(parseInt(limit));
 
       const totalBusinesses = await BusinessModel.countDocuments();
       const totalProducts = await ProductModel.countDocuments();
@@ -61,10 +77,27 @@ export const getAllShopsAndProductsService = async (req, res) => {
 
       const businessQuery = { businessName: { $regex: search, $options: 'i' } };
 
-      data = await BusinessModel.find(businessQuery, 'businessName userID')
-        .skip((page - 1) * limit)
-        .limit(parseInt(limit))
-        .exec();
+      data = await BusinessModel.aggregate([
+        { $match: businessQuery },
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'userID',
+            foreignField: '_id',
+            as: 'user',
+          },
+        },
+        { $unwind: '$user' },
+        {
+          $project: {
+            businessName: 1,
+            userID: 1,
+            'user.image': 1,
+          },
+        },
+        { $skip: (page - 1) * limit },
+        { $limit: parseInt(limit) },
+      ]);
 
       total = await BusinessModel.countDocuments(businessQuery);
 
@@ -115,11 +148,21 @@ export const getAllShopsAndProductsService = async (req, res) => {
         },
         { $unwind: '$business' },
         {
+          $lookup: {
+            from: 'users',
+            localField: 'business.userID',
+            foreignField: '_id',
+            as: 'user',
+          },
+        },
+        { $unwind: '$user' },
+        {
           $project: {
             title: 1,
             shortDescription: 1,
             price: 1,
             'business.businessName': 1,
+            'user.image': 1,
           },
         },
         { $skip: (page - 1) * limit },
@@ -141,6 +184,7 @@ export const getAllShopsAndProductsService = async (req, res) => {
         shortDescription: product.shortDescription,
         price: product.price,
         businessName: product.business.businessName,
+        image: product.user.image,
       }));
 
       return {
