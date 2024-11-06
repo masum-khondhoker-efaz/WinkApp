@@ -11,6 +11,7 @@ import * as OrderController from '../app/controllers/OrderController.js';
 import * as BusinessController from '../app/controllers/BusinessController.js';
 import * as WishController from '../app/controllers/WishController.js';
 import * as ReviewController from '../app/controllers/ReviewController.js';
+import * as PaymentController from '../app/controllers/PaymentController.js';
 
 const router = express.Router();
 
@@ -246,6 +247,27 @@ router.get(
   CustomerController.getProductsByCategory
 );
 
+router.post(
+  '/payment-setup',
+  AuthenticationMiddleware,
+  PaymentController.paymentSetup
+);
+router.put(
+  '/payment-initiate/:id',
+  AuthenticationMiddleware,
+  PaymentController.paymentInitiate
+);
 
+router.post(
+  '/payment-webhook',
+  AuthenticationMiddleware,
+  PaymentController.paymentWebhook
+);
+
+router.post(
+  'payment-transaction/:transactionID',
+  AuthenticationMiddleware,
+  PaymentController.paymentTransaction
+  ); 
 
 export default router;
