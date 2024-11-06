@@ -5,7 +5,7 @@ const DataSchema = new mongoose.Schema(
     userID: { type: mongoose.Schema.Types.ObjectId, ref:'users', required: true },
     productID: { type: mongoose.Schema.Types.ObjectId, ref:'products', required: true },
     comments: { type: String, required: true },
-    rating: { type: String, required: true },
+    ratings: { type: Number, required: true },
   },
   {
     timestamps: true,

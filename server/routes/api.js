@@ -10,6 +10,7 @@ import * as CartController from '../app/controllers/CartController.js';
 import * as OrderController from '../app/controllers/OrderController.js';
 import * as BusinessController from '../app/controllers/BusinessController.js';
 import * as WishController from '../app/controllers/WishController.js';
+import * as ReviewController from '../app/controllers/ReviewController.js';
 
 const router = express.Router();
 
@@ -214,12 +215,35 @@ router.get(
   CustomerController.getShopByID
 );
 
-
-
 router.get(
   '/detail-product/:id',
   AuthenticationMiddleware,
   CustomerController.getProductDetailsByID
+);
+
+// Customer review routes
+router.post(
+  '/customer-review',
+  AuthenticationMiddleware,
+  ReviewController.customerReview
+);
+router.get(
+  '/get-customer-review',
+  AuthenticationMiddleware,
+  ReviewController.getCustomerReview
+);
+
+// Featured products with category
+router.get(
+  '/featured-products',
+  AuthenticationMiddleware,
+  CustomerController.getFeaturedProducts
+);
+
+router.get(
+  '/products-by-category',
+  AuthenticationMiddleware,
+  CustomerController.getProductsByCategory
 );
 
 

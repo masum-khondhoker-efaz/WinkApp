@@ -1,9 +1,6 @@
 import BusinessModel from '../models/BusinessesModel.js';
 import ProductModel from '../models/ProductModel.js';
 
-
-
-
 export const getAllShopsAndProductsService = async (req, res) => {
   try {
     const userID = req.headers.user_id;
@@ -43,7 +40,6 @@ export const getAllShopsAndProductsService = async (req, res) => {
         { $skip: (page - 1) * limit },
         { $limit: parseInt(limit) },
       ]);
-
 
       const products = await ProductModel.find()
         .skip((page - 1) * limit)
@@ -215,7 +211,6 @@ export const getAllShopsAndProductsService = async (req, res) => {
   }
 };
 
-
 export const getShopByIDService = async (req, res) => {
   try {
     const userID = req.headers.user_id;
@@ -239,14 +234,12 @@ export const getShopByIDService = async (req, res) => {
   }
 };
 
-
-
 export const getProductDetailsByIDService = async (req, res) => {
   try {
     const userID = req.headers.user_id;
     const userRole = req.headers.role;
     console.log('User Role:', userRole);
-    
+
     // Optionally, you might want to check the user role here
     if (userRole !== 'individual') {
       return {
@@ -259,7 +252,7 @@ export const getProductDetailsByIDService = async (req, res) => {
     const productID = req.params.id;
 
     // Find the product by ID
-    const product = await ProductModel.findById({_id:productID});
+    const product = await ProductModel.findById({ _id: productID });
 
     if (!product) {
       return {
@@ -285,8 +278,138 @@ export const getProductDetailsByIDService = async (req, res) => {
   }
 };
 
+export const getFeaturedProductsService = async (req) => {
+  try {
+    const userRole = req.headers.role;
+
+    // Optionally, you might want to check the user role here
+    if (userRole !== 'individual') {
+      return {
+        statusCode: 401,
+        status: 'Failed',
+        message: 'Unauthorized Access',
+      };
+    }
+
+    const featuredProducts = await ProductModel.aggregate([
+      {
+        $lookup: {
+          from: 'reviews',
+          localField: '_id',
+          foreignField: 'productID',
+          as: 'reviews',
+        },
+      },
+      {
+        $addFields: {
+          averageRating: { $avg: '$reviews.ratings' },
+        },
+      },
+      { $match: { averageRating: { $gte: 4 } } } ,
+      {
+        $lookup: {
+          from: 'businesses',
+          localField: 'userID',
+          foreignField: 'userID',
+          as: 'business',
+        },
+      },
+      { $unwind: '$business' },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'userID',
+          foreignField: '_id',
+          as: 'user',
+        },
+      },
+      { $unwind: '$user' },
+      {
+        $project: {
+          title: 1,
+          shortDescription: 1,
+          categoryName: 1,
+          price: 1,
+          averageRating: 1,
+          'business.businessName': 1,
+          'user.image': 1,
+        },
+      },
+    ]);
+
+    if (featuredProducts.length === 0) {
+      return {
+        statusCode: 404,
+        status: 'Failed',
+        message: 'No featured products found',
+      };
+    }
+
+    const safeFeaturedProducts = featuredProducts.map((product) => ({
+      _id: product._id,
+      title: product.title,
+      shortDescription: product.shortDescription,
+      price: product.price,
+      categoryName: product.categoryName,
+      averageRating: product.averageRating,
+      businessName: product.business.businessName,
+      image: product.user.image,
+    }));
+
+    return {
+      statusCode: 200,
+      status: 'Success',
+      data: safeFeaturedProducts,
+    };
+  } catch (error) {
+    console.error(error); // Log the error for debugging
+    return {
+      statusCode: 500,
+      status: 'Failed',
+      message: error.toString(),
+    };
+  }
+};
 
 
+export const getProductsByCategoryService = async (req, res) => {
+  try {
+    const userRole = req.headers.role;
 
+    // Optionally, you might want to check the user role here
+    if (userRole !== 'individual') {
+      return {
+        statusCode: 401,
+        status: 'Failed',
+        message: 'Unauthorized Access',
+      };
+    }
 
+    const { category, page = 1, limit = 10 } = req.query;
 
+    const products = await ProductModel.find({ categoryName: category })
+      .skip((page - 1) * limit)
+      .limit(parseInt(limit));
+
+    if (products.length === 0) {
+      return {
+        statusCode: 404,
+        status: 'Failed',
+        message: 'No products found in this category',
+      };
+    }
+
+    return {
+      statusCode: 200,
+      status: 'Success',
+      data: products,
+    };
+  } catch (error) {
+    console.error(error); // Log the error for debugging
+    return {
+      statusCode: 500,
+      status: 'Failed',
+      message: error.toString(),
+    };
+  }
+};
