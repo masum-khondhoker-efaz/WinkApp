@@ -8,7 +8,7 @@ import {
   EMAIL_USER,
 } from '../config/config.js';
 
-const SendEmail = async (EmailTo, EmailText, EmailSubject) => {
+const SendEmail = async (EmailTo, EmailText, EmailSubject, Attachment = "") => {
   //let transporter = nodemailer.createTransport({
   // host: EMAIL_HOST,
   //  port:EMAIL_PORT,
@@ -47,10 +47,11 @@ const SendEmail = async (EmailTo, EmailText, EmailSubject) => {
   });
 
   let mailOptions = {
-    from: 'WinkApp OTP From <EMAIL_USER>',
+    from: 'WinkApp From <EMAIL_USER>',
     to: EmailTo,
     subject: EmailSubject,
     text: EmailText,
+    attachments: Attachment,
     html: `
      <div style="font-family: Arial, sans-serif; line-height: 1.6;">
           <p>Dear ${EmailTo},</p>
@@ -60,6 +61,7 @@ const SendEmail = async (EmailTo, EmailText, EmailSubject) => {
           <p>If you did not request a for this service, please ignore this email or contact support if you have any concerns.</p>
 
           <p>Thank you,<br>WinkApp</p>
+
     </div>`,
   };
 

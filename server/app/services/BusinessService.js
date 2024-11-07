@@ -1,6 +1,8 @@
+import BusinessPaymentModel from "../models/BusinessPaymentModel.js";
 import OrderModel from "../models/OrderModel.js";
 import ProductModel from "../models/ProductModel.js";
 import UserModel from "../models/UsersModel.js";
+import bcrypt from "bcrypt";
 
 
 
@@ -168,3 +170,150 @@ export const updateOrderStatusService = async (req, res) => {
     };
   }
 };
+
+export const addPaymentDetailsService = async (req, res) => {
+  try {
+    const userID = req.headers.user_id;
+    if (req.headers.role !== 'business') {
+      return {
+        statusCode: 401,
+        status: 'Failed',
+        message: 'Unauthorized Access',
+      };
+    }
+
+    const { secretKey, publishableKey } = req.body;
+
+    // Hash the secretKey and publishableKey using bcrypt
+    const hashedSecretKey = await bcrypt.hash(secretKey, 10);
+    const hashedPublishableKey = await bcrypt.hash(publishableKey, 10);
+
+  
+    // Insert payment details into BusinessPaymentModel
+    const paymentDetails = {
+      secretKey: hashedSecretKey,
+      publishableKey: hashedPublishableKey,
+      userID: userID,
+    };
+
+    const data = await BusinessPaymentModel.create(paymentDetails);
+    return {
+      statusCode: 200,
+      status: 'Success',
+      message: 'Payment details added successfully',
+      data: data,
+    };
+  } catch (error) {
+    console.error(error); // Log the error for debugging
+    return {
+      statusCode: 500,
+      status: 'Failed',
+      message: error.message || 'Internal Server Error',
+    };
+  }
+}
+
+export const updatePaymentDetailsService = async (req, res) => {
+  try {
+    const userID = req.headers.user_id;
+    if (req.headers.role !== 'business') {
+      return {
+        statusCode: 401,
+        status: 'Failed',
+        message: 'Unauthorized Access',
+      };
+    }
+
+    const { secretKey, publishableKey } = req.body;
+
+    // Hash the secretKey and publishableKey using bcrypt
+    const hashedSecretKey = await bcrypt.hash(secretKey, 10);
+    const hashedPublishableKey = await bcrypt.hash(publishableKey, 10);
+
+    // Update the payment details
+    const updatedPayment = await BusinessPaymentModel.findOneAndUpdate(
+      { userID: userID },
+      { secretKey: hashedSecretKey, publishableKey: hashedPublishableKey },
+      { new: true }
+    );
+    if (!updatedPayment) {
+      return {
+        statusCode: 404,
+        status: 'Failed',
+        message: 'Payment details not found',
+      };
+    }
+
+    return {
+      statusCode: 200,
+      status: 'Success',
+      message: 'Payment details updated successfully',
+      data: updatedPayment,
+    };
+  } catch (error) {
+    console.error(error); // Log the error for debugging
+    return {
+      statusCode: 500,
+      status: 'Failed',
+      message: error.message || 'Internal Server Error',
+    };
+  }
+}
+
+export const getPaymentDetailsService = async (req, res) => {
+  try {
+    const userID = req.headers.user_id;
+    if (req.headers.role !== 'business') {
+      return {
+        statusCode: 401,
+        status: 'Failed',
+        message: 'Unauthorized Access',
+      };
+    }
+
+    // Fetch payment details for the specific user
+    const payment = await BusinessPaymentModel.findOne({
+      userID: userID,
+    });
+
+    if (payment) {
+      // Decrypt the secretKey and publishableKey before sending the response
+      const decryptedSecretKey = await bcrypt.compare(req.body.secretKey, payment.secretKey);
+      const decryptedPublishableKey = await bcrypt.compare(req.body.publishableKey, payment.publishableKey);
+
+      if (!decryptedSecretKey || !decryptedPublishableKey) {
+      return {
+        statusCode: 401,
+        status: 'Failed',
+        message: 'Invalid payment details',
+      };
+      }
+
+      payment.secretKey = req.body.secretKey;
+      payment.publishableKey = req.body.publishableKey;
+    }
+
+    if (!payment) {
+      return {
+        statusCode: 404,
+        status: 'Failed',
+        message: 'Payment information not found',
+      };
+    }
+
+    // Send the successful response with payment details
+    return {
+      statusCode: 200,
+      status: 'Success',
+      message: 'Payment transaction completed successfully',
+      data: payment,
+    };
+  } catch (error) {
+    console.error(error); // Log the error for debugging
+    return {
+      statusCode: 500,
+      status: 'Failed',
+      message: error.message || 'Internal Server Error',
+    };
+  }
+}

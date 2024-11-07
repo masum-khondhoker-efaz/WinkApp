@@ -28,3 +28,5 @@ export const FAIL_URL = '';
 export const CANCEL_URL = '';
 export const INIT_URL = '';
 
+export const STRIPE_KEY = process.env.SECRET_KEY;
+export const STRIPE_PUBLIC_KEY = process.env.PUBLISHABLE_KEY;

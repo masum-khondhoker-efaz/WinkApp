@@ -157,33 +157,6 @@ router.delete(
   WishController.deleteToWish
 );
 
-// Order management routes for the customer
-router.post(
-  '/create-order',
-  AuthenticationMiddleware,
-    OrderController.createOrder
-);
-router.put(
-  '/update-order/:id',
-  AuthenticationMiddleware,
-    OrderController.updateOrder
-);
-router.get(
-  '/order-details/:id',
-  AuthenticationMiddleware,
-    OrderController.getOrderDetails
-);
-router.get(
-  '/orders',
-  AuthenticationMiddleware,
-    OrderController.getAllOrders
-);
-router.delete(
-  '/delete-order/:id',
-  AuthenticationMiddleware,
-    OrderController.deleteOrder
-);
-
 
 // Business order management routes
 router.get(
@@ -247,27 +220,99 @@ router.get(
   CustomerController.getProductsByCategory
 );
 
+// Order management routes for the customer
 router.post(
-  '/payment-setup',
+  '/create-order',
   AuthenticationMiddleware,
-  PaymentController.paymentSetup
-);
-router.put(
-  '/payment-initiate/:id',
-  AuthenticationMiddleware,
-  PaymentController.paymentInitiate
+    OrderController.createOrder
 );
 
-router.post(
-  '/payment-webhook',
+router.get(
+  '/retrieve-payment/:sessionId',
   AuthenticationMiddleware,
-  PaymentController.paymentWebhook
+  PaymentController.retrieveSessionById
 );
 
-router.post(
-  'payment-transaction/:transactionID',
+router.get(
+  '/payment-transaction/:transactionID',
   AuthenticationMiddleware,
   PaymentController.paymentTransaction
-  ); 
+);
+
+router.get(
+  '/payment-transactions/',
+  AuthenticationMiddleware,
+  PaymentController.allPaymentTransaction
+);
+
+
+
+
+// router.put(
+//   '/update-order/:id',
+//   AuthenticationMiddleware,
+//     OrderController.updateOrder
+// );
+
+
+router.get(
+  '/order-details/:id',
+  AuthenticationMiddleware,
+    OrderController.getOrderDetails
+);
+router.get(
+  '/orders',
+  AuthenticationMiddleware,
+    OrderController.getAllOrders
+);
+
+// router.delete(
+//   '/delete-order/:id',
+//   AuthenticationMiddleware,
+//     OrderController.deleteOrder
+// );
+
+// router.post(
+//   '/payment-setup',
+//   AuthenticationMiddleware,
+//   PaymentController.paymentSetup
+// );
+// router.put(
+//   '/payment-initiate/:id',
+//   AuthenticationMiddleware,
+//   PaymentController.paymentInitiate
+// );
+
+// router.post(
+//   '/payment-webhook',
+//   AuthenticationMiddleware,
+//   PaymentController.paymentWebhook
+// );
+
+// router.post(
+//   'payment-transaction/:transactionID',
+//   AuthenticationMiddleware,
+//   PaymentController.paymentTransaction
+//   ); 
+
+
+// Business payment details routes
+ router.post(
+   '/add-payment-details',
+    AuthenticationMiddleware,
+    BusinessController.addPaymentDetails
+  );
+
+ router.put(
+   '/update-payment-details',
+   AuthenticationMiddleware,
+   BusinessController.updatePaymentDetails
+ );
+
+router.get(
+  '/payment-details',
+  AuthenticationMiddleware,
+  BusinessController.getPaymentDetails
+);
 
 export default router;

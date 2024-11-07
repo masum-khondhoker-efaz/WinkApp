@@ -2,6 +2,9 @@ import {
   getAllOrdersService,
   getOrderDetailsService,
   updateOrderStatusService,
+  addPaymentDetailsService,
+  updatePaymentDetailsService,
+  getPaymentDetailsService,
 } from '../services/BusinessService.js';
 
 
@@ -19,3 +22,26 @@ export const updateOrderStatus = async (req, res) => {
   let result = await updateOrderStatusService(req, res);
   return res.status(result.statusCode).json(result);
 };
+
+
+
+export const addPaymentDetails = async (req, res) => {
+  let result = await addPaymentDetailsService(req, res);
+  return res.status(result.statusCode).json(result);
+};
+
+
+export const updatePaymentDetails = async (req, res) => {
+  let result = await updatePaymentDetailsService(req, res);
+  return res.status(result.statusCode).json(result);
+};
+
+
+
+export const getPaymentDetails = async (req, res) => {
+  let result = await getPaymentDetailsService(req, res);
+  return res.status(result.statusCode).json(result);
+};
+
+
+
