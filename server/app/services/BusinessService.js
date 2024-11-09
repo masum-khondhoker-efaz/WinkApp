@@ -2,9 +2,39 @@ import BusinessPaymentModel from "../models/BusinessPaymentModel.js";
 import OrderModel from "../models/OrderModel.js";
 import ProductModel from "../models/ProductModel.js";
 import UserModel from "../models/UsersModel.js";
-import bcrypt from "bcrypt";
+import crypto from 'crypto';
+import mongoose from 'mongoose';
+
+import {
+  CRYPTO_SECRET_KEY,
+} from '../config/config.js';
+
+// Define the algorithm and key (store key securely, e.g., in environment variables)
+const algorithm = 'aes-256-cbc';
+const key = Buffer.from(CRYPTO_SECRET_KEY, 'hex'); // Store key in an env variable
+
+const encrypt = (text) => {
+  const iv = crypto.randomBytes(16);
+  const cipher = crypto.createCipheriv(algorithm, key, iv);
+  let encrypted = cipher.update(text);
+  encrypted = Buffer.concat([encrypted, cipher.final()]);
+  return JSON.stringify({ iv: iv.toString('hex'), encryptedData: encrypted.toString('hex') });
+};
 
 
+
+// Now save `encryptedSecretKey` and `encryptedPublishableKey` as strings in the database
+
+
+// Decryption function
+const decrypt = (encrypted) => {
+  const iv = Buffer.from(encrypted.iv, 'hex');
+  const encryptedText = Buffer.from(encrypted.encryptedData, 'hex');
+  const decipher = crypto.createDecipheriv(algorithm, key, iv);
+  let decrypted = decipher.update(encryptedText);
+  decrypted = Buffer.concat([decrypted, decipher.final()]);
+  return decrypted.toString();
+};
 
 export const getAllOrdersService = async (req, res) => {
   try {
@@ -173,7 +203,7 @@ export const updateOrderStatusService = async (req, res) => {
 
 export const addPaymentDetailsService = async (req, res) => {
   try {
-    const userID = req.headers.user_id;
+    const userID = new mongoose.Types.ObjectId(req.headers.user_id);
     if (req.headers.role !== 'business') {
       return {
         statusCode: 401,
@@ -184,15 +214,24 @@ export const addPaymentDetailsService = async (req, res) => {
 
     const { secretKey, publishableKey } = req.body;
 
-    // Hash the secretKey and publishableKey using bcrypt
-    const hashedSecretKey = await bcrypt.hash(secretKey, 10);
-    const hashedPublishableKey = await bcrypt.hash(publishableKey, 10);
+    // Check if payment details already exist for the user
+    const existingPayment = await BusinessPaymentModel.findOne({ userID: userID });
+    if (existingPayment) {
+      return {
+        statusCode: 400,
+        status: 'Failed',
+        message: 'Payment details already exist for this user',
+      };
+    }
 
-  
-    // Insert payment details into BusinessPaymentModel
+    // Encrypt and store as JSON strings
+    const encryptedSecretKey = encrypt(secretKey);
+    const encryptedPublishableKey = encrypt(publishableKey);
+
+    // Prepare the data for insertion
     const paymentDetails = {
-      secretKey: hashedSecretKey,
-      publishableKey: hashedPublishableKey,
+      secretKey: encryptedSecretKey,
+      publishableKey: encryptedPublishableKey,
       userID: userID,
     };
 
@@ -211,7 +250,7 @@ export const addPaymentDetailsService = async (req, res) => {
       message: error.message || 'Internal Server Error',
     };
   }
-}
+};
 
 export const updatePaymentDetailsService = async (req, res) => {
   try {
@@ -226,16 +265,20 @@ export const updatePaymentDetailsService = async (req, res) => {
 
     const { secretKey, publishableKey } = req.body;
 
-    // Hash the secretKey and publishableKey using bcrypt
-    const hashedSecretKey = await bcrypt.hash(secretKey, 10);
-    const hashedPublishableKey = await bcrypt.hash(publishableKey, 10);
+    // Encrypt the secretKey and publishableKey
+    const encryptedSecretKey = encrypt(secretKey);
+    const encryptedPublishableKey = encrypt(publishableKey);
 
     // Update the payment details
     const updatedPayment = await BusinessPaymentModel.findOneAndUpdate(
       { userID: userID },
-      { secretKey: hashedSecretKey, publishableKey: hashedPublishableKey },
+      {
+        secretKey: encryptedSecretKey,
+        publishableKey: encryptedPublishableKey,
+      },
       { new: true }
     );
+
     if (!updatedPayment) {
       return {
         statusCode: 404,
@@ -258,7 +301,7 @@ export const updatePaymentDetailsService = async (req, res) => {
       message: error.message || 'Internal Server Error',
     };
   }
-}
+};
 
 export const getPaymentDetailsService = async (req, res) => {
   try {
@@ -276,23 +319,6 @@ export const getPaymentDetailsService = async (req, res) => {
       userID: userID,
     });
 
-    if (payment) {
-      // Decrypt the secretKey and publishableKey before sending the response
-      const decryptedSecretKey = await bcrypt.compare(req.body.secretKey, payment.secretKey);
-      const decryptedPublishableKey = await bcrypt.compare(req.body.publishableKey, payment.publishableKey);
-
-      if (!decryptedSecretKey || !decryptedPublishableKey) {
-      return {
-        statusCode: 401,
-        status: 'Failed',
-        message: 'Invalid payment details',
-      };
-      }
-
-      payment.secretKey = req.body.secretKey;
-      payment.publishableKey = req.body.publishableKey;
-    }
-
     if (!payment) {
       return {
         statusCode: 404,
@@ -301,7 +327,16 @@ export const getPaymentDetailsService = async (req, res) => {
       };
     }
 
-    // Send the successful response with payment details
+    // Decrypt the secretKey and publishableKey
+    const decryptedSecretKey = decrypt(JSON.parse(payment.secretKey));
+    const decryptedPublishableKey = decrypt(JSON.parse(payment.publishableKey));
+
+
+    // Replace encrypted values with decrypted ones for the response
+    payment.secretKey = decryptedSecretKey;
+    payment.publishableKey = decryptedPublishableKey;
+
+    // Send the successful response with decrypted payment details
     return {
       statusCode: 200,
       status: 'Success',
@@ -316,4 +351,4 @@ export const getPaymentDetailsService = async (req, res) => {
       message: error.message || 'Internal Server Error',
     };
   }
-}
+};

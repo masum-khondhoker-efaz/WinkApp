@@ -5,6 +5,9 @@ import { fileURLToPath } from 'url';
 import ProductModel from '../models/ProductModel.js';
 import { cloudinaryUploadImage } from '../middlewares/multermiddleware.js';
 import { cloudinaryDeleteImage } from '../middlewares/multermiddleware.js';
+import BusinessPaymentModel from '../models/BusinessPaymentModel.js';
+import UserModel from '../models/UsersModel.js';
+import mongoose from 'mongoose';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -18,6 +21,18 @@ export const addProductService = async (req, res) => {
         statusCode: 401,
         status: 'Failed',
         message: 'Unauthorized Access',
+      };
+    }
+
+    // Check if the user has added payment details
+    const paymentDetails = await BusinessPaymentModel.find({
+      userID: new mongoose.Types.ObjectId(userID),
+    });
+    if (!paymentDetails) {
+      return {
+        statusCode: 403,
+        status: 'Failed',
+        message: 'Forbidden: You must add payment details before adding products',
       };
     }
 
@@ -55,7 +70,6 @@ export const addProductService = async (req, res) => {
       fs.unlinkSync(imagePath); // Remove the image after uploading
     }
 
-    console.log(imageData);
 
     const productData = JSON.parse(data);
     productData.images = imageData; // Store images as an array

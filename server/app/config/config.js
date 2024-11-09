@@ -30,3 +30,4 @@ export const INIT_URL = '';
 
 export const STRIPE_KEY = process.env.SECRET_KEY;
 export const STRIPE_PUBLIC_KEY = process.env.PUBLISHABLE_KEY;
+export const CRYPTO_SECRET_KEY = process.env.ENCRYPTION_KEY;

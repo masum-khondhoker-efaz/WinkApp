@@ -8,8 +8,9 @@ import Stripe from 'stripe';
 import { STRIPE_KEY } from '../config/config.js';
 import IndividualModel from '../models/IndividualsModel.js';
 import UserModel from '../models/UsersModel.js';
+import BusinessPaymentModel from '../models/BusinessPaymentModel.js';
 
-const stripe = new Stripe(STRIPE_KEY);
+
 
 export const createOrderService = async (req, res) => {
   const session = await mongoose.startSession();
@@ -117,6 +118,16 @@ export const createOrderService = async (req, res) => {
       userID,
       productID: { $in: productObjectIDs },
     }).session(session);
+
+    // Fetch the secretKey from BusinessPaymentModel using userID from ProductModel
+    const productOwner = await ProductModel.findById(productObjectIDs[0]).select('userID').session(session);
+    const businessPaymentDetails = await BusinessPaymentModel.findOne({ userID: productOwner.userID }).session(session);
+
+    if (!businessPaymentDetails) {
+      throw new Error('Payment details not found for the product owner.');
+    }
+
+    const stripe = new Stripe(businessPaymentDetails.secretKey);
 
     // Create Stripe checkout session
     const stripeSession = await stripe.checkout.sessions.create({

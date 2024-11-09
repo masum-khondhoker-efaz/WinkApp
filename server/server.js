@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import app from './app.js';
 import { DATABASE_URL, PORT } from './app/config/config.js';
+// import crypto from 'crypto';
 
 // Function to connect to the database
 async function connectDB() {
@@ -23,6 +24,7 @@ async function startServer() {
     console.log(`Server is running on http://localhost:${PORT}`);
   });
 }
+// console.log(crypto.randomBytes(32).toString('hex'));
 
 // // Only call startServer if this script is being run directly
 // if (process.env.NODE_ENV !== 'vercel') {

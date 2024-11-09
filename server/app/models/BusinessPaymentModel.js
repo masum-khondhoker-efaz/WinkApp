@@ -5,7 +5,7 @@ const Schema = mongoose.Schema;
 const BusinessSchema = new Schema(
   {
     userID: {
-      type: String,
+      type: mongoose.Schema.Types.ObjectId,
       required: true,
     },
     secretKey: {
