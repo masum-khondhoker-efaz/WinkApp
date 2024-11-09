@@ -2,10 +2,27 @@ import OrderModel from '../models/OrderModel.js';
 import Stripe from 'stripe';
 import PaymentModel from '../models/PaymentModel.js';
 import SendEmail from '../utilities/EmailUtility.js';
-import { STRIPE_KEY } from '../config/config.js';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import crypto from 'crypto';
+import mongoose from 'mongoose';
 
-const stripe = new Stripe(STRIPE_KEY);
+import { CRYPTO_SECRET_KEY } from '../config/config.js';
+import ProductModel from '../models/ProductModel.js';
+import BusinessPaymentModel from '../models/BusinessPaymentModel.js';
+
+
+// Define the algorithm and key (store key securely, e.g., in environment variables)
+const algorithm = 'aes-256-cbc';
+const key = Buffer.from(CRYPTO_SECRET_KEY, 'hex'); // Store key in an env variable
+// Decryption function
+const decrypt = (encrypted) => {
+  const iv = Buffer.from(encrypted.iv, 'hex');
+  const encryptedText = Buffer.from(encrypted.encryptedData, 'hex');
+  const decipher = crypto.createDecipheriv(algorithm, key, iv);
+  let decrypted = decipher.update(encryptedText);
+  decrypted = Buffer.concat([decrypted, decipher.final()]);
+  return decrypted.toString();
+};
 
 const createPDF = async (info) => {
   const pdfDoc = await PDFDocument.create();
@@ -148,7 +165,40 @@ const createPDF = async (info) => {
 };
 
 
+
 const retrievePaymentInfoBySessionIdFromStripe = async (sessionId) => {
+  // Parse product IDs from the request body
+  const { productIDs } = req.body;
+  if (!productIDs || !Array.isArray(productIDs) || productIDs.length === 0) {
+    await session.abortTransaction();
+    session.endSession();
+    return {
+      statusCode: 400,
+      status: 'Failed',
+      message: 'No products specified for the order.',
+    };
+  }
+
+  // Convert productIDs to ObjectId instances
+  const productObjectIDs = productIDs.map(
+    (id) => new mongoose.Types.ObjectId(id)
+  );
+  // Fetch the secretKey from BusinessPaymentModel using userID from ProductModel
+  const productOwner = await ProductModel.findById(productObjectIDs[0])
+    .select('userID')
+    .session(session);
+  const businessPaymentDetails = await BusinessPaymentModel.findOne({
+    userID: productOwner.userID,
+  }).session(session);
+
+  if (!businessPaymentDetails) {
+    throw new Error('Payment details not found for the product owner.');
+  }
+
+  const decryptedSecretKey = decrypt(
+    JSON.parse(businessPaymentDetails.secretKey)
+  );
+  const stripe = new Stripe(decryptedSecretKey);
   const session = await stripe.checkout.sessions.retrieve(sessionId, {
     expand: ['line_items'],
   });
@@ -199,11 +249,15 @@ const retrievePaymentInfoBySessionIdFromStripe = async (sessionId) => {
 
 
 export const retrieveSessionByIdService = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
   try {
     const userID = req.headers.user_id;
-    const sessionId = req.params.sessionId; // assuming sessionId is passed in the request body
+    const sessionId = req.params.sessionId; // assuming sessionId is passed in the URL as a parameter
 
     if (req.headers.role !== 'individual') {
+      await session.abortTransaction();
+      session.endSession();
       return {
         statusCode: 401,
         status: 'Failed',
@@ -211,30 +265,124 @@ export const retrieveSessionByIdService = async (req, res) => {
       };
     }
 
-    // Retrieve payment info using your function
-    const paymentInfo = await retrievePaymentInfoBySessionIdFromStripe(
-      sessionId
-    );
-    if (paymentInfo.paymentStatus === 'paid') {
-      await PaymentModel.updateOne(
-        { paymentId: sessionId },
-        { paymentStatus: 'paid' }
-      );
-    }
-    await OrderModel.updateOne(
-      { _id: paymentInfo.orderId },
-      { orderStatus: 'processing',
-        paymentStatus: 'paid' }
-    );
-    if (!paymentInfo) {
+    // Fetch the product owner's secretKey for Stripe from the database
+    const { productIDs } = req.body;
+    if (!productIDs || !Array.isArray(productIDs) || productIDs.length === 0) {
+      await session.abortTransaction();
+      session.endSession();
       return {
-        statusCode: 404,
+        statusCode: 400,
         status: 'Failed',
-        message: 'Payment information not found',
+        message: 'No products specified for the order.',
       };
     }
 
-    // Send the successful response with payment details
+    const productObjectIDs = productIDs.map(
+      (id) => new mongoose.Types.ObjectId(id)
+    );
+    const productOwner = await ProductModel.findById(productObjectIDs[0])
+      .select('userID')
+      .session(session);
+    const businessPaymentDetails = await BusinessPaymentModel.findOne({
+      userID: productOwner.userID,
+    }).session(session);
+
+    if (!businessPaymentDetails) {
+      throw new Error('Payment details not found for the product owner.');
+    }
+
+    const decryptedSecretKey = decrypt(
+      JSON.parse(businessPaymentDetails.secretKey)
+    );
+    const stripe = new Stripe(decryptedSecretKey);
+
+    // Retrieve the Stripe session using the session ID
+    const stripeSession = await stripe.checkout.sessions.retrieve(sessionId, {
+      expand: ['line_items'],
+    });
+
+    // Extract payment information from the session
+    const paymentInfo = {
+      paymentId: stripeSession.id,
+      orderId: stripeSession.metadata.orderId,
+      userId: stripeSession.metadata.userId,
+      productName: stripeSession.line_items.data[0].description,
+      totalAmount: stripeSession.amount_total,
+      currency: stripeSession.currency,
+      customerDetails: stripeSession.customer_details,
+      paymentMethod: stripeSession.payment_method_types[0],
+      paymentStatus: stripeSession.payment_status,
+      mode: stripeSession.mode,
+    };
+
+    // If the payment is complete, perform additional actions
+    if (stripeSession.payment_status === 'paid') {
+      // Check if the payment record exists, or create a new one if it doesn’t
+      let paymentRecord = await PaymentModel.findOne({ paymentId: sessionId });
+      if (!paymentRecord) {
+        paymentRecord = new PaymentModel({
+          paymentId: stripeSession.id,
+          productName: stripeSession.line_items.data[0].description,
+          orderId: stripeSession.metadata.orderId,
+          userId: stripeSession.metadata.userId,
+          totalAmount: stripeSession.amount_total,
+          currency: stripeSession.currency,
+          customerDetails: stripeSession.customer_details,
+          paymentMethod: stripeSession.payment_method_types[0],
+          paymentStatus: stripeSession.payment_status,
+          mode: stripeSession.mode,
+        });
+        await paymentRecord.save({ session });
+      }
+
+      // Generate PDF for the payment confirmation
+      const pdfBuffer = await createPDF(paymentRecord);
+      const emailSubject = `Payment Confirmation for ${stripeSession.line_items.data[0].description}`;
+      const emailTo = stripeSession.customer_details.email;
+      const emailText = `<div style="font-family: Arial, sans-serif; line-height: 1.6;">
+            <p>Dear ${stripeSession.customer_details.name},</p>
+            <p>Your payment is complete for ${stripeSession.line_items.data[0].description}</p>
+            <p>Please ignore this email or contact support if you have any concerns.</p>
+            <p>Thank you,<br>The GP Clinic Team</p>
+       </div>`;
+      const attachments = [
+        {
+          filename: `Payment_Confirmation_${stripeSession.line_items.data[0].description}.pdf`,
+          content: Buffer.from(pdfBuffer),
+          contentType: 'application/pdf',
+        },
+      ];
+
+      // Send the email
+      await SendEmail(emailTo, emailText, emailSubject, attachments);
+
+      // Update the order and payment status in the database
+      await OrderModel.updateOne(
+        { _id: paymentInfo.orderId },
+        {
+          orderStatus: 'processing',
+          paymentStatus: 'paid',
+        },
+        { session }
+      );
+      await PaymentModel.updateOne(
+        { paymentId: sessionId },
+        { paymentStatus: 'paid' },
+        { session }
+      );
+
+      await session.commitTransaction();
+      session.endSession();
+      return {
+        statusCode: 200,
+        status: 'Success',
+        message: 'Payment details retrieved and processed successfully',
+        data: paymentInfo,
+      };
+    }
+
+    await session.commitTransaction();
+    session.endSession();
     return {
       statusCode: 200,
       status: 'Success',
@@ -242,7 +390,10 @@ export const retrieveSessionByIdService = async (req, res) => {
       data: paymentInfo,
     };
   } catch (error) {
-    console.error(error); // Log the error for debugging
+    // Roll back the transaction on error
+    await session.abortTransaction();
+    session.endSession();
+    console.error(error);
     return {
       statusCode: 500,
       status: 'Failed',
@@ -250,6 +401,7 @@ export const retrieveSessionByIdService = async (req, res) => {
     };
   }
 };
+
 
 
 export const paymentTransactionService = async (req, res) => {
