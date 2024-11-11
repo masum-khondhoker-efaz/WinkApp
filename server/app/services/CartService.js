@@ -80,13 +80,24 @@ export const getAllCartService = async (req, res) => {
 
         // Fetch all cart items for the specific user
         const cartItems = await CartModel.find({ userID });
+        const cartItemsWithProductDetails = await Promise.all(
+          cartItems.map(async (item) => {
+            const product = await ProductModel.findById(item.productID);
+            return {
+              ...item.toObject(),
+              productDetails: product,
+            };
+          })
+        );
 
         return {
-            statusCode: 200,
-            status: 'Success',
-            message: 'All cart items retrieved successfully',
-            data: cartItems,
+          statusCode: 200,
+          status: 'Success',
+          message: 'All cart items with product details retrieved successfully',
+          data: cartItemsWithProductDetails,
         };
+
+      
     } catch (error) {
         console.error(error); // Log the error for debugging
         return {
@@ -95,6 +106,44 @@ export const getAllCartService = async (req, res) => {
             message: error.message || 'Internal Server Error',
         };
     }
+};
+export const getCartWithProductDetailsService = async (req, res) => {
+  try {
+    const userID = req.headers.user_id;
+    if (req.headers.role !== 'individual') {
+      return {
+        statusCode: 401,
+        status: 'Failed',
+        message: 'Unauthorized Access',
+      };
+    }
+
+    // Fetch all cart items for the specific user
+    const cartItems = await CartModel.find({ userID });
+
+    // Fetch product details for each cart item
+    const cartItemsWithProductDetails = await Promise.all(cartItems.map(async (item) => {
+      const product = await ProductModel.findById(item.productID);
+      return {
+        ...item.toObject(),
+        productDetails: product,
+      };
+    }));
+
+    return {
+      statusCode: 200,
+      status: 'Success',
+      message: 'All cart items with product details retrieved successfully',
+      data: cartItemsWithProductDetails,
+    };
+  } catch (error) {
+    console.error(error); // Log the error for debugging
+    return {
+      statusCode: 500,
+      status: 'Failed',
+      message: error.message || 'Internal Server Error',
+    };
+  }
 };
 
 
